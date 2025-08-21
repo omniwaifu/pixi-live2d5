@@ -15,10 +15,15 @@
       "import": "./dist/cubism2.es.js",
       "require": "./dist/cubism2.js"
     },
+    "./cubism5": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/cubism5.es.js",
+      "require": "./dist/cubism5.js"
+    },
     "./cubism4": {
       "types": "./types/index.d.ts",
-      "import": "./dist/cubism4.es.js",
-      "require": "./dist/cubism4.js"
+      "import": "./dist/cubism5.es.js",
+      "require": "./dist/cubism5.js"
     },
     "./extra": {
       "types": "./types/extra.d.ts",
@@ -76,6 +81,7 @@
     "pixi.js": "^7.3.2",
     "prettier": "^3.0.3",
     "rimraf": "^3.0.2",
+    "terser": "^5.43.1",
     "type-fest": "^4.4.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",

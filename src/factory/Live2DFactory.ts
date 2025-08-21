@@ -341,10 +341,14 @@ export class Live2DFactory {
 
             const path = expressionManager.getExpressionFile(definition);
 
+            // Detect if this is Cubism 5 and load as text instead of json
+            const runtime = Live2DFactory.findRuntime(expressionManager.settings);
+            const loadType = runtime?.constructor.name === "Cubism5Runtime" ? "text" : "json";
+
             tasks[index] ??= Live2DLoader.load({
                 url: path,
                 settings: expressionManager.settings,
-                type: "json",
+                type: loadType,
                 target: expressionManager,
             })
                 .then((data) => {

@@ -1,4 +1,4 @@
-import { CubismConfig } from "@cubism/config";
+import { CSM_LOG_LEVEL_VERBOSE } from "@cubism/cubismframeworkconfig";
 
 const LOG_LEVEL_VERBOSE = 0;
 const LOG_LEVEL_WARNING = 1;
@@ -50,7 +50,7 @@ export const config = {
      */
     preserveExpressionOnMotion: true,
 
-    cubism4: CubismConfig,
+    cubism5: { logLevel: CSM_LOG_LEVEL_VERBOSE },
 };
 
 /**

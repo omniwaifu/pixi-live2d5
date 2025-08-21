@@ -10,14 +10,13 @@ export abstract class ModelSettings {
 
     /**
      * The model's name, typically used for displaying or logging. By default it's inferred from
-     * the URL by taking the folder name (the second to last component). In Cubism 2 it'll be overwritten
-     * by the `name` field of settings JSON.
+     * the URL by taking the folder name (the second to last component).
      */
     name: string;
 
     /**
      * URL of the model settings file, used to resolve paths of the resource files defined in settings.
-     * This typically ends with `.model.json` in Cubism 2 and `.model3.json` in Cubism 4.
+     * This typically ends with `.model3.json` in Cubism 5.
      */
     url: string;
 

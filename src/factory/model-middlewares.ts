@@ -14,12 +14,13 @@ const TAG = "Live2DFactory";
  */
 export const urlToJSON: Middleware<Live2DFactoryContext> = async (context, next) => {
     if (typeof context.source === "string") {
-        const data = await Live2DLoader.load({
+        const textData = await Live2DLoader.load({
             url: context.source,
-            type: "json",
+            type: "text",
             target: context.live2dModel,
         });
 
+        const data = JSON.parse(textData);
         data.url = context.source;
 
         context.source = data;
@@ -83,12 +84,15 @@ export const setupOptionals: Middleware<Live2DFactoryContext> = async (context, 
         if (runtime) {
             const tasks: Promise<void>[] = [];
 
+            // Load pose and physics as JSON for all runtimes
+            const loadType = "json";
+
             if (settings.pose) {
                 tasks.push(
                     Live2DLoader.load({
                         settings,
                         url: settings.pose,
-                        type: "json",
+                        type: loadType,
                         target: internalModel,
                     })
                         .then((data: ArrayBuffer) => {
@@ -107,7 +111,7 @@ export const setupOptionals: Middleware<Live2DFactoryContext> = async (context, 
                     Live2DLoader.load({
                         settings,
                         url: settings.physics,
-                        type: "json",
+                        type: loadType,
                         target: internalModel,
                     })
                         .then((data: ArrayBuffer) => {

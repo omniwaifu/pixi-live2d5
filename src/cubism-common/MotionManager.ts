@@ -214,7 +214,9 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends util
         index: number,
         priority = MotionPriority.NORMAL,
     ): Promise<boolean> {
+        console.log(`Starting motion: group="${group}", index=${index}, priority=${priority}`);
         if (!this.state.reserve(group, index, priority)) {
+            console.log("Motion reservation failed");
             return false;
         }
 
@@ -349,6 +351,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends util
             this.state.complete();
 
             if (this.state.shouldRequestIdleMotion()) {
+                console.log("Starting random idle motion for group:", this.groups.idle);
                 // noinspection JSIgnoredPromiseFromCall
                 this.startRandomMotion(this.groups.idle, MotionPriority.IDLE);
             }

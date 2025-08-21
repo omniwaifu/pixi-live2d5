@@ -1,7 +1,7 @@
 # pixi-live2d-display
 
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/guansss/pixi-live2d-display?style=flat-square)
-![Cubism version](https://img.shields.io/badge/Cubism-2/3/4-ff69b4?style=flat-square)
+![Cubism version](https://img.shields.io/badge/Cubism-5-ff69b4?style=flat-square)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/guansss/pixi-live2d-display/test.yml?style=flat-square)
 
 English | [中文](README.zh.md)
@@ -14,7 +14,7 @@ Live2D models on a high level without the need to learn how the internal system 
 
 #### Features
 
-- Supports all versions of Live2D models
+- Supports Cubism 5 Live2D models
 - Supports PIXI.RenderTexture and PIXI.Filter
 - Pixi-style transform APIs: position, scale, rotation, skew, anchor
 - Automatic interactions: focusing, hit-testing
@@ -25,7 +25,7 @@ Live2D models on a high level without the need to learn how the internal system 
 #### Requirements
 
 - PixiJS: 6.x
-- Cubism core: 2.1 or 4
+- Cubism core: 5
 - Browser: WebGL, ES6
 
 #### Demos
@@ -43,41 +43,18 @@ Live2D models on a high level without the need to learn how the internal system 
 
 ## Cubism
 
-Cubism is the name of Live2D SDK. There are so far three versions of it: Cubism 2.1, Cubism 3 and Cubism 4; where Cubism
-4 is backward-compatible with Cubism 3 models.
-
-This plugin supports all variants of Live2D models by using Cubism 2.1 and Cubism 4.
+Cubism is the name of Live2D SDK. This plugin supports Cubism 5 models.
 
 #### Cubism Core
 
 Before using the plugin, you'll need to include the Cubism runtime library, aka Cubism Core.
 
-For Cubism 4, you need `live2dcubismcore.min.js` that can be extracted from
-the [Cubism 4 SDK](https://www.live2d.com/download/cubism-sdk/download-web/), or be referred by
-a [direct link](https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js) (_however the direct link is quite
-unreliable, don't use it in production!_).
+For Cubism 5, you need `live2dcubismcore.min.js` that can be extracted from
+the [Cubism 5 SDK](https://www.live2d.com/download/cubism-sdk/download-web/).
 
-For Cubism 2.1, you need `live2d.min.js`. It's no longer downloadable from the official
-site [since 2019/9/4](https://help.live2d.com/en/other/other_20/), but can be
-found [here](https://github.com/dylanNew/live2d/tree/master/webgl/Live2D/lib), and with
-a [CDN link](https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js) that you'll probably need.
+#### Bundle
 
-#### Individual Bundles
-
-The plugin provides individual bundles for each Cubism version to reduce your app's size when you just want to use one
-of the versions.
-
-Specifically, there are `cubism2.js` and `cubism4.js` for respective runtime, along with an `index.js` that includes
-both of them.
-
-Note that if you want both the Cubism 2.1 and Cubism 4 support, use `index.js`, but _not_ the combination
-of `cubism2.js` and `cubism4.js`.
-
-To make it clear, here's how you would use these files:
-
-- Use `cubism2.js`+`live2d.min.js` to support Cubism 2.1 models
-- Use `cubism4.js`+`live2dcubismcore.min.js` to support Cubism 3 and Cubism 4 models
-- Use `index.js`+`live2d.min.js`+`live2dcubismcore.min.js` to support all versions of models
+The plugin provides `cubism5.js` for Cubism 5 runtime support. Use `cubism5.js`+`live2dcubismcore.min.js` to support Cubism 5 models.
 
 ## Installation
 
@@ -90,23 +67,15 @@ npm install pixi-live2d-display
 ```js
 import { Live2DModel } from 'pixi-live2d-display';
 
-// if only Cubism 2.1
-import { Live2DModel } from 'pixi-live2d-display/cubism2';
-
-// if only Cubism 4
-import { Live2DModel } from 'pixi-live2d-display/cubism4';
+// for Cubism 5
+import { Live2DModel } from 'pixi-live2d-display/cubism5';
 ```
 
 #### Via CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script>
-
-<!-- if only Cubism 2.1 -->
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism2.min.js"></script>
-
-<!-- if only Cubism 4 -->
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism4.min.js"></script>
+<!-- for Cubism 5 -->
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism5.min.js"></script>
 ```
 
 In this way, all the exported members are available under `PIXI.live2d` namespace, such as `PIXI.live2d.Live2DModel`.
@@ -126,7 +95,7 @@ window.PIXI = PIXI;
     view: document.getElementById('canvas'),
   });
 
-  const model = await Live2DModel.from('shizuku.model.json');
+  const model = await Live2DModel.from('mao.model3.json');
 
   app.stage.addChild(model);
 
@@ -171,7 +140,7 @@ Renderer.registerPlugin('interaction', InteractionManager);
     view: document.getElementById('canvas'),
   });
 
-  const model = await Live2DModel.from('shizuku.model.json');
+  const model = await Live2DModel.from('mao.model3.json');
 
   app.stage.addChild(model);
 })();
@@ -179,5 +148,5 @@ Renderer.registerPlugin('interaction', InteractionManager);
 
 ---
 
-The example Live2D models, Shizuku (Cubism 2.1) and Haru (Cubism 4), are redistributed under
+The example Live2D model, Mao (Cubism 5), is redistributed under
 Live2D's [Free Material License](https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html).

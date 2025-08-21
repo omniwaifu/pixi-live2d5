@@ -140,6 +140,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
      */
     protected init(options?: Live2DModelOptions) {
         this.tag = `Live2DModel(${this.internalModel.settings.name})`;
+        console.log('Live2DModel.init() called');
     }
 
     /**
