@@ -24,13 +24,6 @@
 -   Cubism core：5
 -   浏览器：WebGL， ES6
 
-#### 示例
-
--   [基础示例](https://codepen.io/guansss/pen/oNzoNoz/left?editors=1010)
--   [交互示例](https://codepen.io/guansss/pen/KKgXBOP/left?editors=0010)
--   [渲染纹理与滤镜示例](https://codepen.io/guansss/pen/qBaMNQV/left?editors=1010)
--   [Live2D Viewer Online](https://guansss.github.io/live2d-viewer-web/)
-
 #### 文档
 
 -   [文档](https://guansss.github.io/pixi-live2d-display)（暂无中文翻译）

@@ -28,13 +28,6 @@ Live2D models on a high level without the need to learn how the internal system 
 - Cubism core: 5
 - Browser: WebGL, ES6
 
-#### Demos
-
-- [Basic demo](https://codepen.io/guansss/pen/oNzoNoz/left?editors=1010)
-- [Interaction demo](https://codepen.io/guansss/pen/KKgXBOP/left?editors=0010)
-- [Render texture & filter demo](https://codepen.io/guansss/pen/qBaMNQV/left?editors=1010)
-- [Live2D Viewer Online](https://guansss.github.io/live2d-viewer-web/)
-
 #### Documentations
 
 - [Documentation](https://guansss.github.io/pixi-live2d-display)
