@@ -1,17 +1,19 @@
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { build } from "vite";
+import { existsSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const entries = [
-    { entry: "src/csm2.ts", name: "cubism2" },
     { entry: "src/csm5.ts", name: "cubism5" },
     { entry: "src/index.ts", name: "index" },
     { entry: "src/extra.ts", name: "extra" },
 ];
 
-const profiles = entries.flatMap(({ entry, name }) =>
+const profiles = entries
+    .filter(({ entry }) => existsSync(resolve(__dirname, "..", entry)))
+    .flatMap(({ entry, name }) =>
     [false, true].map((minify) => ({
         build: {
             emptyOutDir: false,

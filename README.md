@@ -6,7 +6,7 @@
 
 English | [中文](README.zh.md)
 
-Live2D integration for [PixiJS](https://github.com/pixijs/pixi.js) v6.
+Live2D integration for [PixiJS](https://github.com/pixijs/pixi.js) v8.
 
 This project aims to be a universal Live2D framework on the web platform. While the official Live2D framework is just
 complex and problematic, this project has rewritten it to unify and simplify the APIs, which allows you to control the
@@ -24,7 +24,7 @@ Live2D models on a high level without the need to learn how the internal system 
 
 #### Requirements
 
-- PixiJS: 6.x
+- PixiJS: 8.x
 - Cubism core: 5
 - Browser: WebGL, ES6
 
@@ -109,28 +109,19 @@ window.PIXI = PIXI;
 })();
 ```
 
-## Package importing
-
-When importing Pixi packages on-demand, you may need to manually register some plugins to enable optional features.
+## Usage with PixiJS v8
 
 ```javascript
-import { Application } from '@pixi/app';
-import { Ticker, TickerPlugin } from '@pixi/ticker';
-import { InteractionManager } from '@pixi/interaction';
+import { Application, Ticker } from 'pixi.js';
 import { Live2DModel } from 'pixi-live2d-display';
 
-// register Ticker for Live2DModel
 Live2DModel.registerTicker(Ticker);
 
-// register Ticker for Application
-Application.registerPlugin(TickerPlugin);
-
-// register InteractionManager to make Live2D models interactive
-Renderer.registerPlugin('interaction', InteractionManager);
-
 (async function () {
-  const app = new Application({
-    view: document.getElementById('canvas'),
+  const app = new Application();
+  await app.init({
+    canvas: document.getElementById('canvas'),
+    resizeTo: window,
   });
 
   const model = await Live2DModel.from('mao.model3.json');

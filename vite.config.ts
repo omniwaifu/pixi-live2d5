@@ -51,15 +51,15 @@ export default defineConfig(({ command, mode }) => {
             },
             rollupOptions: {
                 external(id, parentId, isResolved) {
-                    if (id === "pixi.js") {
-                        throw new Error("do not import pixi.js, import @pixi/* instead");
-                    }
-
-                    return id.startsWith("@pixi/");
+                    return id === "pixi.js" || id.startsWith("@pixi/");
                 },
                 output: {
                     extend: true,
                     globals(id: string) {
+                        if (id === "pixi.js") {
+                            return "PIXI";
+                        }
+
                         if (id.startsWith("@pixi/")) {
                             const packageJsonPath = path.resolve(
                                 __dirname,

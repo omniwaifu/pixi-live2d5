@@ -15,7 +15,7 @@ import type { CubismModelUserData } from "@cubism/model/cubismmodeluserdata";
 import type { CubismPhysics } from "@cubism/physics/cubismphysics";
 import { CubismRenderer_WebGL } from "@cubism/rendering/cubismrenderer_webgl";
 import { CubismShaderManager_WebGL } from "@cubism/rendering/cubismshader_webgl";
-import { Matrix } from "@pixi/core";
+import { Matrix } from "pixi.js";
 import type { Mutable } from "../types/helpers";
 
 const tempMatrix = new CubismMatrix44();

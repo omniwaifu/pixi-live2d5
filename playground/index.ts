@@ -14,11 +14,15 @@ config.sound = true;
 const cubism5Model = "/test/assets/Mao/Mao.model3.json";
 
 (async function main() {
-    const app = new Application({
-        view: document.getElementById("canvas") as HTMLCanvasElement,
+    const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+
+    const app = new Application();
+    await app.init({
+        canvas,
         autoStart: true,
         resizeTo: window,
         backgroundColor: 0x333333,
+        preference: "webgl",
     });
     (window as any).app = app;
 
@@ -50,7 +54,7 @@ const cubism5Model = "/test/assets/Mao/Mao.model3.json";
     });
 
     // Set up mouse tracking
-    setupMouseTracking(model5, app.view as HTMLCanvasElement);
+    setupMouseTracking(model5, app.canvas as HTMLCanvasElement);
 })();
 
 function draggable(model: Live2DModel) {
@@ -58,13 +62,13 @@ function draggable(model: Live2DModel) {
     model.cursor = 'pointer';
     model.on("pointerdown", (e: any) => {
         (model as any).dragging = true;
-        (model as any)._pointerX = e.data.global.x - model.x;
-        (model as any)._pointerY = e.data.global.y - model.y;
+        (model as any)._pointerX = e.global.x - model.x;
+        (model as any)._pointerY = e.global.y - model.y;
     });
     model.on("pointermove", (e: any) => {
         if ((model as any).dragging) {
-            model.position.x = e.data.global.x - (model as any)._pointerX;
-            model.position.y = e.data.global.y - (model as any)._pointerY;
+            model.position.x = e.global.x - (model as any)._pointerX;
+            model.position.y = e.global.y - (model as any)._pointerY;
         }
     });
     model.on("pointerupoutside", () => ((model as any).dragging = false));

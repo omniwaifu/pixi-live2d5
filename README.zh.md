@@ -4,7 +4,7 @@
 ![Cubism version](https://img.shields.io/badge/Cubism-5-ff69b4?style=flat-square)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/guansss/pixi-live2d-display/test.yml?style=flat-square)
 
-为 [PixiJS](https://github.com/pixijs/pixi.js) v6 提供的 Live2D 插件
+为 [PixiJS](https://github.com/pixijs/pixi.js) v8 提供的 Live2D 插件
 
 此项目旨在成为 web 平台上的通用 Live2D 框架。由于 Live2D 的官方框架非常复杂且不可靠，这个项目已将其重写以提供统一且简单的 API，使你可以从较高的层次来控制 Live2D 模型而无需了解其内部的工作原理
 
@@ -20,7 +20,7 @@
 
 #### 要求
 
--   PixiJS：6.x
+-   PixiJS：8.x
 -   Cubism core：5
 -   浏览器：WebGL， ES6
 
@@ -102,28 +102,19 @@ window.PIXI = PIXI;
 })();
 ```
 
-## 包导入
-
-当按需导入 Pixi 的包时，需要手动注册相应的组件来启用可选功能
+## PixiJS v8 用法
 
 ```javascript
-import { Application } from '@pixi/app';
-import { Ticker } from '@pixi/ticker';
-import { InteractionManager } from '@pixi/interaction';
+import { Application, Ticker } from 'pixi.js';
 import { Live2DModel } from 'pixi-live2d-display';
 
-// 为 Live2DModel 注册 Ticker
 Live2DModel.registerTicker(Ticker);
 
-// 为 Application 注册 Ticker
-Application.registerPlugin(TickerPlugin);
-
-// 注册 InteractionManager 以支持 Live2D 模型的自动交互
-Renderer.registerPlugin('interaction', InteractionManager);
-
 (async function () {
-    const app = new Application({
-        view: document.getElementById('canvas'),
+    const app = new Application();
+    await app.init({
+        canvas: document.getElementById('canvas'),
+        resizeTo: window,
     });
 
     const model = await Live2DModel.from('mao.model3.json');

@@ -1,9 +1,5 @@
 import type { Live2DModel } from "@/Live2DModel";
-import type { Renderer } from "@pixi/core";
-import { Rectangle } from "@pixi/core";
-import { Graphics } from "@pixi/graphics";
-import { Text, TextStyle } from "@pixi/text";
-import type { FederatedPointerEvent } from "pixi.js";
+import { Graphics, Rectangle, Text, TextStyle, type FederatedPointerEvent } from "pixi.js";
 
 const tempBounds = new Rectangle();
 
@@ -22,6 +18,7 @@ export class HitAreaFrames extends Graphics {
         this.eventMode = "static";
 
         this.on("added", this.init).on("globalpointermove", this.onPointerMove);
+        this.onRender = () => this.redraw();
     }
 
     init() {
@@ -46,22 +43,23 @@ export class HitAreaFrames extends Graphics {
     }
 
     onPointerMove(e: FederatedPointerEvent) {
-        const hitAreaNames = (this.parent as Live2DModel).hitTest(e.data.global.x, e.data.global.y);
+        const hitAreaNames = (this.parent as Live2DModel).hitTest(e.global.x, e.global.y);
 
         this.texts.forEach((text) => {
             text.visible = hitAreaNames.includes(text.text);
         });
     }
 
-    /** @override */
-    protected _render(renderer: Renderer): void {
+    private redraw(): void {
         const internalModel = (this.parent as Live2DModel).internalModel;
 
         // extract scale from the transform matrix, and invert it to ease following calculation
         // https://math.stackexchange.com/a/13165
         const scale =
             1 /
-            Math.sqrt(this.transform.worldTransform.a ** 2 + this.transform.worldTransform.b ** 2);
+            Math.sqrt(this.worldTransform.a ** 2 + this.worldTransform.b ** 2);
+
+        this.clear();
 
         this.texts.forEach((text) => {
             this.lineStyle({
@@ -86,9 +84,5 @@ export class HitAreaFrames extends Graphics {
             text.y = bounds.y + this.strokeWidth * scale;
             text.scale.set(scale);
         });
-
-        super._render(renderer);
-
-        this.clear();
     }
 }

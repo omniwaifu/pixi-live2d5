@@ -1,5 +1,5 @@
 import type { InternalModel, ModelSettings } from "@/cubism-common";
-import type { Texture } from "@pixi/core";
+import type { Texture } from "pixi.js";
 import type { JSONObject } from "./helpers";
 
 export interface Live2DModelEvents {

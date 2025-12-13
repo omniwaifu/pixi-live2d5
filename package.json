@@ -59,7 +59,7 @@
   ],
   "types": "types/index.d.ts",
   "peerDependencies": {
-    "pixi.js": "^7.0.0"
+    "pixi.js": "^8.0.0"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.6",
@@ -78,7 +78,7 @@
     "jest-image-snapshot": "^6.2.0",
     "jszip": "^3.10.0",
     "lodash-es": "^4.17.21",
-    "pixi.js": "^7.3.2",
+    "pixi.js": "^8.14.3",
     "prettier": "^3.0.3",
     "rimraf": "^3.0.2",
     "terser": "^5.43.1",

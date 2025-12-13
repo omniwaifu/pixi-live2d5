@@ -2,11 +2,18 @@ import type { InternalModel, ModelSettings, MotionPriority } from "@/cubism-comm
 import type { MotionManagerOptions } from "@/cubism-common/MotionManager";
 import type { Live2DFactoryOptions } from "@/factory/Live2DFactory";
 import { Live2DFactory } from "@/factory/Live2DFactory";
-import type { Rectangle, Renderer, Texture, Ticker } from "@pixi/core";
-import { Matrix, ObservablePoint, Point } from "@pixi/core";
-import { Container } from "@pixi/display";
+import {
+    Matrix,
+    ObservablePoint,
+    Point,
+    ViewContainer,
+    type DestroyOptions,
+    type Rectangle,
+    type Renderer,
+    type Texture,
+    type Ticker,
+} from "pixi.js";
 import { Automator, type AutomatorOptions } from "./Automator";
-import { Live2DTransform } from "./Live2DTransform";
 import type { JSONObject } from "./types/helpers";
 import { logger } from "./utils";
 
@@ -26,7 +33,13 @@ export type Live2DConstructor = { new (options?: Live2DModelOptions): Live2DMode
  * ```
  * @emits {@link Live2DModelEvents}
  */
-export class Live2DModel<IM extends InternalModel = InternalModel> extends Container {
+export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewContainer {
+    /** @internal */
+    override readonly renderPipeId = "customRender";
+    /** @internal */
+    batched = false;
+    /** @internal */
+    override allowChildren = true;
     /**
      * Creates a Live2DModel from given source.
      * @param source - Can be one of: settings file URL, settings JSON object, ModelSettings instance.
@@ -100,19 +113,23 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
      */
     textures: Texture[] = [];
 
-    /** @override */
-    transform = new Live2DTransform();
-
     /**
      * The anchor behaves like the one in `PIXI.Sprite`, where `(0, 0)` means the top left
      * and `(1, 1)` means the bottom right.
      */
-    anchor = new ObservablePoint(this.onAnchorChange, this, 0, 0) as ObservablePoint<any>; // cast the type because it breaks the casting of Live2DModel
+    private readonly _anchorObserver = { _onUpdate: () => this.onAnchorChange() };
+    anchor = new ObservablePoint(this._anchorObserver as any, 0, 0);
 
     /**
-     * An ID of Gl context that syncs with `renderer.CONTEXT_UID`. Used to check if the GL context has changed.
+     * WebGL context currently used to render this model.
      */
-    protected glContextID = -1;
+    private glContext: WebGLRenderingContext | null = null;
+
+    /**
+     * An ID that increments when the WebGL context changes. Used by the Live2D renderer
+     * to reset context-bound resources.
+     */
+    protected glContextID = 0;
 
     /**
      * Elapsed time in milliseconds since created.
@@ -127,7 +144,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
     automator: Automator;
 
     constructor(options?: Live2DModelOptions) {
-        super();
+        super({ label: "Live2DModel" });
 
         this.automator = new Automator(this, options);
 
@@ -140,13 +157,17 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
      */
     protected init(options?: Live2DModelOptions) {
         this.tag = `Live2DModel(${this.internalModel.settings.name})`;
-        console.log('Live2DModel.init() called');
+        this.onAnchorChange();
     }
 
     /**
      * A callback that observes {@link anchor}, invoked when the anchor's values have been changed.
      */
     protected onAnchorChange(): void {
+        if (!this.internalModel) {
+            return;
+        }
+
         this.pivot.set(
             this.anchor.x * this.internalModel.width,
             this.anchor.y * this.internalModel.height,
@@ -245,42 +266,21 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
         result: Point = position.clone(),
         skipUpdate?: boolean,
     ): Point {
-        if (!skipUpdate) {
-            this._recursivePostUpdateTransform();
-
-            if (!this.parent) {
-                (this.parent as any) = this._tempDisplayObjectParent;
-                this.displayObjectUpdateTransform();
-                (this.parent as any) = null;
-            } else {
-                this.displayObjectUpdateTransform();
-            }
-        }
-
-        this.transform.worldTransform.applyInverse(position, result);
+        this.toLocal(position, undefined, result, skipUpdate);
         this.internalModel.localTransform.applyInverse(result, result);
 
         return result;
     }
 
-    /**
-     * A method required by `PIXI.InteractionManager` to perform hit-testing.
-     * @param point - A Point in world space.
-     * @return True if the point is inside this model.
-     */
-    containsPoint(point: Point): boolean {
-        return this.getBounds(true).contains(point.x, point.y);
-    }
+    /** @internal */
+    protected updateBounds(): void {
+        this._bounds.clear();
 
-    /** @override */
-    protected _calculateBounds(): void {
-        this._bounds.addFrame(
-            this.transform,
-            0,
-            0,
-            this.internalModel.width,
-            this.internalModel.height,
-        );
+        if (!this.internalModel) {
+            return;
+        }
+
+        this._bounds.addFrame(0, 0, this.internalModel.width, this.internalModel.height);
     }
 
     /**
@@ -295,59 +295,51 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
         // don't call `this.internalModel.update()` here, because it requires WebGL context
     }
 
-    override _render(renderer: Renderer): void {
-        // reset certain systems in renderer to make Live2D's drawing system compatible with Pixi
-        renderer.batch.reset();
-        renderer.geometry.reset();
-        renderer.shader.reset();
-        renderer.state.reset();
+    render(renderer: Renderer): void {
+        if (!this.internalModel) {
+            return;
+        }
 
-        let shouldUpdateTexture = false;
+        const gl = (renderer as any).gl as WebGLRenderingContext | undefined;
+
+        // Live2D renderer is WebGL-only (at least for now).
+        if (!gl) {
+            return;
+        }
+
+        // reset certain systems in renderer to make Live2D's drawing system compatible with Pixi
+        (renderer as any).shader?.resetState?.();
+        (renderer as any).geometry?.resetState?.();
+        (renderer as any).state?.resetState?.();
+        (renderer as any).stencil?.resetState?.();
 
         // when the WebGL context has changed
-        if (this.glContextID !== (renderer as any).CONTEXT_UID) {
-            this.glContextID = (renderer as any).CONTEXT_UID;
+        if (this.glContext !== gl) {
+            this.glContext = gl;
+            this.glContextID++;
 
-            this.internalModel.updateWebGLContext(renderer.gl, this.glContextID);
-
-            shouldUpdateTexture = true;
+            this.internalModel.updateWebGLContext(gl, this.glContextID);
         }
 
         for (let i = 0; i < this.textures.length; i++) {
             const texture = this.textures[i]!;
 
-            if (!texture.valid) {
-                continue;
-            }
+            gl.pixelStorei(WebGLRenderingContext.UNPACK_FLIP_Y_WEBGL, this.internalModel.textureFlipY);
 
-            if (
-                shouldUpdateTexture ||
-                !(texture.baseTexture as any)._glTextures[this.glContextID]
-            ) {
-                renderer.gl.pixelStorei(
-                    WebGLRenderingContext.UNPACK_FLIP_Y_WEBGL,
-                    this.internalModel.textureFlipY,
-                );
+            // Ensure Pixi has created/uploaded the GPU texture.
+            (renderer as any).texture.bind(texture, 0);
 
-                // let the TextureSystem generate corresponding WebGLTexture, and bind to an arbitrary location
-                renderer.texture.bind(texture.baseTexture, 0);
-            }
+            // Bind the underlying WebGLTexture into Live2D core.
+            const glTexture = (renderer as any).texture.getGlSource(texture.source).texture as WebGLTexture;
 
-            // bind the WebGLTexture into Live2D core.
-            // because the Texture in Pixi can be shared between multiple DisplayObjects,
-            // it's unable to know if the WebGLTexture in this Texture has been destroyed (GCed) and regenerated,
-            // and therefore we always bind the texture at this moment no matter what
-            this.internalModel.bindTexture(
-                i,
-                (texture.baseTexture as any)._glTextures[this.glContextID].texture,
-            );
-
-            // manually update the GC counter so they won't be GCed while using this model
-            (texture.baseTexture as any).touched = renderer.textureGC.count;
+            this.internalModel.bindTexture(i, glTexture);
         }
 
-        const viewport = (renderer.framebuffer as any).viewport as Rectangle;
-        this.internalModel.viewport = [viewport.x, viewport.y, viewport.width, viewport.height];
+        const viewport = (renderer as any).renderTarget?.viewport as Rectangle | undefined;
+
+        if (viewport) {
+            this.internalModel.viewport = [viewport.x, viewport.y, viewport.width, viewport.height];
+        }
 
         // update only if the time has changed, as the model will possibly be updated once but rendered multiple times
         if (this.deltaTime) {
@@ -355,16 +347,41 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
             this.deltaTime = 0;
         }
 
-        const internalTransform = tempMatrix
-            .copyFrom(renderer.globalUniforms.uniforms.projectionMatrix)
-            .append(this.worldTransform);
+        const projectionMatrix = (renderer as any).globalUniforms?.globalUniformData?.projectionMatrix as
+            | Matrix
+            | undefined;
+
+        if (!projectionMatrix) {
+            return;
+        }
+
+        const internalTransform = tempMatrix.copyFrom(projectionMatrix).append(this.worldTransform);
 
         this.internalModel.updateTransform(internalTransform);
-        this.internalModel.draw(renderer.gl);
+        this.internalModel.draw(gl);
 
-        // reset WebGL state and texture bindings
-        renderer.state.reset();
-        renderer.texture.reset();
+        // Live2D draws via raw WebGL calls (viewport, clearColor, bindings...),
+        // so restore Pixi's expected render target state + resync internal caches for the next renderables.
+        const renderTargetAdaptor = (renderer as any).renderTarget?.adaptor as
+            | { _viewPortCache?: Rectangle; _clearColorCache?: number[] }
+            | undefined;
+        const viewPortCache = renderTargetAdaptor?._viewPortCache;
+        if (viewPortCache) {
+            gl.viewport(viewPortCache.x, viewPortCache.y, viewPortCache.width, viewPortCache.height);
+        }
+        const clearColorCache = renderTargetAdaptor?._clearColorCache;
+        if (clearColorCache && clearColorCache.length === 4) {
+            gl.clearColor(clearColorCache[0]!, clearColorCache[1]!, clearColorCache[2]!, clearColorCache[3]!);
+        }
+        // IMPORTANT: Don't call `renderer.resetState()` here. It also resets the renderTarget system,
+        // which can break the active render pass and freeze the frame.
+        (renderer as any).state?.resetState?.();
+        (renderer as any).texture?.resetState?.();
+        (renderer as any).shader?.resetState?.();
+        (renderer as any).geometry?.resetState?.();
+        (renderer as any).stencil?.resetState?.();
+        (renderer as any).colorMask?.resetState?.();
+        (renderer as any).buffer?.resetState?.();
     }
 
     /**
@@ -379,16 +396,17 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
      * @param [options.baseTexture=false] - Only used for child Sprites if options.children is set to true
      *  Should it destroy the base texture of the child sprite
      */
-    destroy(options?: { children?: boolean; texture?: boolean; baseTexture?: boolean }): void {
+    destroy(options?: DestroyOptions): void {
         this.emit("destroy");
 
-        if (options?.texture) {
-            this.textures.forEach((texture) => texture.destroy(options.baseTexture));
+        if (typeof options === "object" && options?.texture) {
+            const destroySource = Boolean((options as any).textureSource ?? (options as any).baseTexture);
+            this.textures.forEach((texture) => texture.destroy(destroySource));
         }
 
         this.automator.destroy();
         this.internalModel.destroy();
 
-        super.destroy(options);
+        super.destroy(options as DestroyOptions);
     }
 }
