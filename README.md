@@ -51,10 +51,16 @@ The plugin provides `cubism5.js` for Cubism 5 runtime support. Use `cubism5.js`+
 
 ## Installation
 
-#### Via npm
+#### Via GitHub (this fork)
 
 ```sh
-npm install pixi-live2d-display
+npm install github:omniwaifu/pixi-live2d5
+```
+
+Or with specific commit/tag:
+
+```sh
+npm install github:omniwaifu/pixi-live2d5#master
 ```
 
 ```js
@@ -64,14 +70,22 @@ import { Live2DModel } from 'pixi-live2d-display';
 import { Live2DModel } from 'pixi-live2d-display/cubism5';
 ```
 
-#### Via CDN
+#### Local Development
 
-```html
-<!-- for Cubism 5 -->
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism5.min.js"></script>
+```sh
+git clone https://github.com/omniwaifu/pixi-live2d5.git
+cd pixi-live2d5
+npm install
+npm run build
 ```
 
-In this way, all the exported members are available under `PIXI.live2d` namespace, such as `PIXI.live2d.Live2DModel`.
+Then link it to your project:
+
+```sh
+npm link
+# In your project directory:
+npm link pixi-live2d-display
+```
 
 ## Basic usage
 
