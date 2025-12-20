@@ -84,8 +84,11 @@ import { Live2DModel } from 'pixi-live2d-display';
 window.PIXI = PIXI;
 
 (async function () {
-  const app = new PIXI.Application({
-    view: document.getElementById('canvas'),
+  const app = new PIXI.Application();
+
+  await app.init({
+    canvas: document.getElementById('canvas'),
+    resizeTo: window,
   });
 
   const model = await Live2DModel.from('mao.model3.json');
@@ -109,16 +112,21 @@ window.PIXI = PIXI;
 })();
 ```
 
-## Usage with PixiJS v8
+## Package importing
+
+When importing Pixi packages on-demand, you may need to manually register the Ticker to enable automatic Live2D model updates.
 
 ```javascript
-import { Application, Ticker } from 'pixi.js';
+import { Application } from 'pixi.js';
+import { Ticker } from 'pixi.js';
 import { Live2DModel } from 'pixi-live2d-display';
 
+// register Ticker for Live2DModel
 Live2DModel.registerTicker(Ticker);
 
 (async function () {
   const app = new Application();
+
   await app.init({
     canvas: document.getElementById('canvas'),
     resizeTo: window,
