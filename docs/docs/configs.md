@@ -1,7 +1,7 @@
 Configs are applied to all models.
 
 ```js
-import { config } from 'pixi-live2d-display';
+import { config } from "pixi-live2d-display";
 
 // log level
 config.logLevel = config.LOG_LEVEL_WARNING; // LOG_LEVEL_VERBOSE, LOG_LEVEL_ERROR, LOG_LEVEL_NONE
@@ -17,7 +17,4 @@ config.motionSync = true;
 config.motionFadingDuration = 500;
 config.idleMotionFadingDuration = 500;
 config.expressionFadingDuration = 500;
-
-// unofficial and experimental support for 4x4 mask division in Cubism 4
-config.cubism4.supportMoreMaskDivisions = true;
 ```

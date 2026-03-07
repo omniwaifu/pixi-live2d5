@@ -1,30 +1,65 @@
 name: Publish Package to npmjs
+
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
+    release:
+        types: [published]
+    workflow_dispatch:
+
+permissions:
+    contents: read
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          registry-url: 'https://registry.npmjs.org'
+    publish:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  submodules: recursive
 
-      - run: npm ci
-      - run: npm run setup
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  registry-url: "https://registry.npmjs.org"
+                  cache: "npm"
 
-      # parse the package version to determine the npm tag to use (most likely "beta").
-      # regex from: https://github.com/Leaflet/Leaflet/blob/35e053c6ff550991a0686865b87a34726e565ce5/.github/workflows/main.yml#L181C29-L181C29
-      - name: Publish to NPM
-        run: |
-          TAG=$(jq .version package.json | grep -oP '^"v?\d+\.\d+\.\d+-?\K(\w+)?')
-          echo "Publishing to npm with tag: ${TAG:-latest}"
-          npm publish --tag ${TAG:-latest}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            - name: Restore Cubism core cache
+              uses: actions/cache@v5
+              id: cache-core
+              with:
+                  path: |
+                      core/live2dcubismcore.js
+                      core/live2dcubismcore.d.ts
+                  key: cubism-core-${{ runner.os }}-${{ hashFiles('scripts/setup.js') }}
+
+            - run: npm ci
+
+            - name: Download Cubism 5 core
+              if: steps.cache-core.outputs.cache-hit != 'true'
+              run: npm run setup
+
+            - name: Ensure Xvfb is available
+              run: |
+                  if ! command -v xvfb-run >/dev/null 2>&1; then
+                    sudo apt-get update
+                    sudo apt-get install -y xvfb
+                  fi
+
+            - run: npm run lint
+            - run: xvfb-run -a npm test
+            - run: npm pack --dry-run
+
+            # parse the package version to determine the npm tag to use (most likely "beta").
+            # Example:
+            # v0.5.0-beta -> beta
+            # 0.5.0 -> latest
+            - name: Determine npm tag
+              id: npm-tag
+              run: |
+                  TAG=$(node -p "const version = require('./package.json').version.replace(/^v/, ''); const prerelease = version.split('-')[1]; prerelease ? prerelease.split('.')[0] : 'latest';")
+                  echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+            - name: Publish to NPM
+              run: npm publish --tag "${{ steps.npm-tag.outputs.tag }}"
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

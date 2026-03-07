@@ -9,10 +9,6 @@ const coreDir = resolve(__dirname, "../core") + "/";
 
 const assets = [
     {
-        url: "http://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js",
-        file: coreDir + "live2d.min.js",
-    },
-    {
         url: "https://cubism.live2d.com/sdk-web/bin/CubismSdkForWeb-5-r.2.zip",
         zipEntries: [
             {

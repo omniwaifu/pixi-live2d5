@@ -1,16 +1,17 @@
 # pixi-live2d-display
 
-![GitHub package.json version](https://img.shields.io/github/package-json/v/guansss/pixi-live2d-display?style=flat-square)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/omniwaifu/pixi-live2d5?style=flat-square)
 ![Cubism version](https://img.shields.io/badge/Cubism-5-ff69b4?style=flat-square)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/guansss/pixi-live2d-display/test.yml?style=flat-square)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/omniwaifu/pixi-live2d5/test.yml?style=flat-square)
 
-为 [PixiJS](https://github.com/pixijs/pixi.js) v8 提供的 Live2D 插件
+为 [PixiJS](https://github.com/pixijs/pixi.js) v8 提供的 Live2D 插件。
 
-此项目旨在成为 web 平台上的通用 Live2D 框架。由于 Live2D 的官方框架非常复杂且不可靠，这个项目已将其重写以提供统一且简单的 API，使你可以从较高的层次来控制 Live2D 模型而无需了解其内部的工作原理
+这个 fork 专注于 Cubism 5 Web runtime 和 PixiJS 8。它保留了原项目较高层次的模型 API，但把支持范围收敛到这个仓库真正会构建、生成类型并进行测试的生产路径。
 
 #### 特性
 
 -   支持 Cubism 5 Live2D 模型
+-   对仍然能被 Cubism 5 SDK 加载的旧版 `.moc3` / `.model3.json` 模型提供 best-effort 兼容
 -   支持 PIXI.RenderTexture 和 PIXI.Filter
 -   Pixi 风格的变换 API：position, scale, rotation, skew, anchor
 -   自动交互：鼠标跟踪, 点击命中检测
@@ -31,57 +32,77 @@
 
 ## Cubism
 
-Cubism 是 Live2D SDK 的名称。该插件支持 Cubism 5 模型。
+Cubism 是 Live2D SDK 的名称。这个 fork 只提供 Cubism 5 的集成。
 
 #### Cubism Core
 
-在使用该插件之前，你需要加载 Cubism 运行时，也就是 Cubism Core
+在使用该插件之前，你需要加载 Cubism 运行时，也就是 Cubism Core。
 
-Cubism 5 需要加载 `live2dcubismcore.min.js`，可以从 [Cubism 5 SDK](https://www.live2d.com/download/cubism-sdk/download-web/) 里解压出来。
+Cubism 5 需要加载 `live2dcubismcore.min.js` 或 `live2dcubismcore.js`，可以从 [Cubism 5 SDK](https://www.live2d.com/download/cubism-sdk/download-web/) 里获取。
 
 #### 打包文件
 
-该插件提供 `cubism5.js` 用于 Cubism 5 运行时支持。使用 `cubism5.js`+`live2dcubismcore.min.js` 以支持 Cubism 5 模型。
+该包提供根入口和 `pixi-live2d-display/cubism5` 两种入口。旧的 `cubism2` / `cubism4` 子路径不属于这个 fork 的公开支持范围。
 
 ## 安装
 
-#### 通过 npm
+#### 通过 GitHub 安装（此 fork）
 
 ```sh
-npm install pixi-live2d-display
+npm install github:omniwaifu/pixi-live2d5
+```
+
+或者指定某个 commit / tag：
+
+```sh
+npm install github:omniwaifu/pixi-live2d5#master
 ```
 
 ```js
-import { Live2DModel } from 'pixi-live2d-display';
+import { Live2DModel } from "pixi-live2d-display";
 
-// 对于 Cubism 5
-import { Live2DModel } from 'pixi-live2d-display/cubism5';
+// 保留用于兼容的显式 Cubism 5 入口
+import { Live2DModel } from "pixi-live2d-display/cubism5";
 ```
 
-#### 通过 CDN
+#### 本地开发
 
-```html
-<!-- 对于 Cubism 5 -->
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism5.min.js"></script>
+```sh
+git clone https://github.com/omniwaifu/pixi-live2d5.git
+cd pixi-live2d5
+npm install
+npm run setup
+npm run build
 ```
 
-通过这种方式加载的话，所有成员都会被导出到 `PIXI.live2d` 命名空间下，比如 `PIXI.live2d.Live2DModel`
+`npm run setup` 会下载 playground 和浏览器 smoke test 所需的 Cubism 5 Core 文件。
+
+然后在你的项目里 link：
+
+```sh
+npm link
+# 在你的项目目录下：
+npm link pixi-live2d-display
+```
 
 ## 基础使用
 
 ```javascript
-import * as PIXI from 'pixi.js';
-import { Live2DModel } from 'pixi-live2d-display';
+import * as PIXI from "pixi.js";
+import { Live2DModel } from "pixi-live2d-display";
 
 // 将 PIXI 暴露到 window 上，这样插件就可以通过 window.PIXI.Ticker 来自动更新模型
 window.PIXI = PIXI;
 
 (async function () {
-    const app = new PIXI.Application({
-        view: document.getElementById('canvas'),
+    const app = new PIXI.Application();
+
+    await app.init({
+        canvas: document.getElementById("canvas"),
+        resizeTo: window,
     });
 
-    const model = await Live2DModel.from('mao.model3.json');
+    const model = await Live2DModel.from("mao.model3.json");
 
     app.stage.addChild(model);
 
@@ -94,30 +115,33 @@ window.PIXI = PIXI;
     model.anchor.set(0.5, 0.5);
 
     // 交互
-    model.on('hit', (hitAreas) => {
-        if (hitAreas.includes('body')) {
-            model.motion('tap_body');
+    model.on("hit", (hitAreas) => {
+        if (hitAreas.includes("body")) {
+            model.motion("tap_body");
         }
     });
 })();
 ```
 
-## PixiJS v8 用法
+`Live2DModel.from()` 期望接收 Cubism 5 兼容的 `model3.json` 模型。较早的 Cubism 3/4 时代 `.moc3` 模型如果仍能被 Cubism 5 SDK 接受，通常也可以工作；但 Cubism 2 的 `.model.json` / `.moc` 资源不在这个 fork 的支持范围内。
+
+## 按需导入 Pixi 包
 
 ```javascript
-import { Application, Ticker } from 'pixi.js';
-import { Live2DModel } from 'pixi-live2d-display';
+import { Application, Ticker } from "pixi.js";
+import { Live2DModel } from "pixi-live2d-display";
 
+// 为 Live2DModel 注册 Ticker
 Live2DModel.registerTicker(Ticker);
 
 (async function () {
     const app = new Application();
     await app.init({
-        canvas: document.getElementById('canvas'),
+        canvas: document.getElementById("canvas"),
         resizeTo: window,
     });
 
-    const model = await Live2DModel.from('mao.model3.json');
+    const model = await Live2DModel.from("mao.model3.json");
 
     app.stage.addChild(model);
 })();

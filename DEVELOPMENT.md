@@ -5,7 +5,7 @@
 Run the following command to clone the repo with submodule:
 
 ```sh
-git clone git@github.com:guansss/pixi-live2d-display.git --recursive
+git clone git@github.com:omniwaifu/pixi-live2d5.git --recursive
 ```
 
 #### Cloning via HTTPS
@@ -13,7 +13,7 @@ git clone git@github.com:guansss/pixi-live2d-display.git --recursive
 Run the following command to clone the repo _without_ submodule:
 
 ```sh
-git clone https://github.com/guansss/pixi-live2d-display.git
+git clone https://github.com/omniwaifu/pixi-live2d5.git
 ```
 
 Then follow one of the following methods to manually install the submodule:
@@ -46,7 +46,7 @@ Install dependencies:
 npm install
 ```
 
-Download Live2D core files into `./core`:
+Download the Cubism 5 core files into `./core`:
 
 ```sh
 npm run setup
@@ -54,50 +54,41 @@ npm run setup
 
 ## Testing
 
-There's a bundle test that requires a production build. Before running the tests for the first time, you need to build the project: (at some point I will automate this step so you don't have to do it manually)
-
-```sh
-npm run build
-```
-
-Then you can run the tests:
+The main validation flow is:
 
 ```sh
 npm run test
 ```
 
-Or run the tests and update snapshots:
+This now generates types, builds the bundles, runs the node tests, and runs the browser smoke tests in one command.
+
+If you only want to run a subset while iterating:
 
 ```sh
-npm run test:u
+npm run lint
+npm run type
+npm run build
+npm run test:node
+npm run test:browser
 ```
-
-If you get an error like `This version of ChromeDriver only supports Chrome version XX`, you need to either upgrade or downgrade your Chrome browser to match that version, or run `npm install chromedriver@<version>` to install the correct version of ChromeDriver (don't commit this change if you are contributing to this project!).
 
 ## Playground
 
-The playground is for debugging and testing. To run the playground:
+The playground is both a debugging surface and a manual smoke test for the public API. To run it:
 
 ```sh
 npm run playground
 ```
 
-Then make changes to `playground/index.ts` and check the result.
-
-Changes to this file should _not_ be committed to git. You can run this command to tell git not to track this file:
-
-```sh
-git update-index --skip-worktree playground/index.ts
-```
+Changes to `playground/index.ts` should be intentional, because the playground is part of the fork's supported validation path.
 
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request if you have any ideas or suggestions.
 
-Before contributing, or better yet, before each commit, please run the following command to lint and fix the code:
+Before contributing, or better yet, before each commit, please run the following command:
 
 ```sh
-npm run lint:fix
+npm run lint
+npm run test
 ```
-
-If there are any errors that cannot be fixed automatically, please fix them manually.

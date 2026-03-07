@@ -1,59 +1,58 @@
-name: Test CI
+name: CI
 
 on:
-  push:
-    branches: [ master ]
-    paths-ignore:
-      - "docs/**"
-      - "playground/**"
-      - "*.md"
-  pull_request:
-    branches: [ master ]
-  workflow_dispatch:
-  workflow_call:
+    push:
+        paths-ignore:
+            - "docs/**"
+            - "*.md"
+    pull_request:
+    workflow_dispatch:
+    workflow_call:
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
+    validate:
+        name: Lint, Test, and Pack
+        runs-on: ubuntu-24.04
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  submodules: recursive
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          registry-url: 'https://registry.npmjs.org'
-          cache: "npm"
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: "npm"
 
-      - name: Cache core files
-        uses: actions/cache@v3
-        id: cache-core
-        with:
-          path: |
-            core/*
-            !core/live2d.d.ts
-          key: ${{ hashFiles('scripts/setup.js') }}
+            - name: Restore Cubism core cache
+              uses: actions/cache@v5
+              id: cache-core
+              with:
+                  path: |
+                      core/live2dcubismcore.js
+                      core/live2dcubismcore.d.ts
+                  key: cubism-core-${{ runner.os }}-${{ hashFiles('scripts/setup.js') }}
 
-      - run: npm ci
+            - run: npm ci
 
-      - name: Set up core files
-        if: steps.cache-core.outputs.cache-hit != 'true'
-        run: |
-          echo Cache miss: ${{ hashFiles('scripts/setup.js') }}
-          npm run setup
+            - name: Download Cubism 5 core
+              if: steps.cache-core.outputs.cache-hit != 'true'
+              run: npm run setup
 
-      - run: npm run type
-      - run: npm run build
+            - name: Ensure Xvfb is available
+              run: |
+                  if ! command -v xvfb-run >/dev/null 2>&1; then
+                    sudo apt-get update
+                    sudo apt-get install -y xvfb
+                  fi
 
-      - name: Run tests
-        uses: GabrielBB/xvfb-action@v1.0
-        with:
-          run: npm test
-
-      - uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: diff-images
-          path: test/**/__image_snapshots__/__diff_output__/*
-          if-no-files-found: ignore
+            - run: npm run lint
+            - run: xvfb-run -a npm test
+            - run: npm pack --dry-run

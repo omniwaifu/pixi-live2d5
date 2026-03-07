@@ -1,21 +1,7 @@
-<style>
-.cubism2 .nodeLabel, .cubism4 .nodeLabel {
-  color: white !important;
-}
-
-.cubism2 > rect {
-  fill: #2d8135 !important;
-}
-
-.cubism4 > rect {
-  fill: #2849b1 !important;
-}
-</style>
-
 ## Class diagram
 
 !!! tip
-    Zoom in the webpage if diagram is too small.
+Zoom in the webpage if diagram is too small.
 
 ```mermaid
 classDiagram
@@ -41,33 +27,21 @@ class ExpressionManager{
   <<abstract>>
 }
 class FocusController
-class Live2DModelWebGL:::cubism2
-class CubismModel:::cubism4
-class Cubism2InternalModel:::cubism2{
-  coreModel: Live2DModelWebGL
-}
-class Cubism4InternalModel:::cubism4{
+class CubismModel
+class Cubism5InternalModel{
   coreModel: CubismModel
 }
-class Cubism2ModelSettings:::cubism2
-class Cubism4ModelSettings:::cubism4
-class Cubism2MotionManager:::cubism2
-class Cubism4MotionManager:::cubism4
-class Cubism2ExpressionManager:::cubism2
-class Cubism4ExpressionManager:::cubism4
+class Cubism5ModelSettings
+class Cubism5MotionManager
+class Cubism5ExpressionManager
 
-InternalModel <|-- Cubism2InternalModel
-InternalModel <|-- Cubism4InternalModel
-ModelSettings <|-- Cubism2ModelSettings
-ModelSettings <|-- Cubism4ModelSettings
-MotionManager <|-- Cubism2MotionManager
-MotionManager <|-- Cubism4MotionManager
-ExpressionManager <|-- Cubism2ExpressionManager
-ExpressionManager <|-- Cubism4ExpressionManager
+InternalModel <|-- Cubism5InternalModel
+ModelSettings <|-- Cubism5ModelSettings
+MotionManager <|-- Cubism5MotionManager
+ExpressionManager <|-- Cubism5ExpressionManager
 
 Live2DModel *-- InternalModel
-Cubism2InternalModel *-- Live2DModelWebGL
-Cubism4InternalModel *-- CubismModel
+Cubism5InternalModel *-- CubismModel
 InternalModel *-- ModelSettings
 InternalModel *-- MotionManager
 MotionManager *-- ExpressionManager
@@ -82,16 +56,16 @@ Models can be created by an async method: `Live2DModel.from(source, options)`.
 
 Source can be one of the following types:
 
--   A URL of the model settings file, which typically ends with `.model.json` (Cubism 2) or `.model3.json` (Cubism 3/4).
+-   A URL of the model settings file, which typically ends with `.model3.json` for Cubism 5.
 
     ```js
-    const model = await Live2DModel.from('path/to/shizuku.model.json');
+    const model = await Live2DModel.from("path/to/shizuku.model3.json");
     ```
 
 -   A JSON object of the model settings. Note that you still need to specify the URL by a `url` property of the JSON object, it's for the resource loaders to know where to load files from.
 
     ```js
-    const url = 'path/to/shizuku.model.json';
+    const url = "path/to/shizuku.model3.json";
     const json = await fetch(url).then((res) => res.json());
 
     json.url = url;
@@ -99,20 +73,20 @@ Source can be one of the following types:
     const model = await Live2DModel.from(json);
     ```
 
--   An instance of `ModelSettings`. Specifically, either `Cubism2ModelSettings` or `Cubism4ModelSettings`.
+-   An instance of `ModelSettings`. For this fork, that means `Cubism5ModelSettings`.
 
     ```js
-    const url = 'path/to/shizuku.model.json';
+    const url = "path/to/shizuku.model3.json";
     const json = await fetch(url).then((res) => res.json());
 
     json.url = url;
 
-    const settings = new Cubism2ModelSettings(json);
+    const settings = new Cubism5ModelSettings(json);
     const model = await Live2DModel.from(settings);
     ```
 
 !!! note
-    URL is required in all cases, because resource loaders rely on the model's URL to resolve its resource files. For example, for a model with URL `path/to/shizuku.model.json`, its texture image `textures/01.png` will be resolved to `path/to/textures/01.png`.
+URL is required in all cases, because resource loaders rely on the model's URL to resolve its resource files. For example, for a model with URL `path/to/shizuku.model3.json`, its texture image `textures/01.png` will be resolved to `path/to/textures/01.png`.
 
 ### Options
 
@@ -127,25 +101,25 @@ This method immediately returns a `Live2DModel` instance, whose resources have *
 
 ```js
 // no `await` here since it's not a Promise
-const model = Live2DModel.fromSync('shizuku.model.json', { onError: console.warn });
+const model = Live2DModel.fromSync("shizuku.model3.json", { onError: console.warn });
 
 // these will cause errors!
 // app.stage.addChild(model);
 // model.motion('tap_body');
 
-model.once('load', () => {
+model.once("load", () => {
     // now it's safe
     app.stage.addChild(model);
-    model.motion('tap_body');
+    model.motion("tap_body");
 });
 ```
 
 With this method, you're able to do extra works when certain resources have been loaded.
 
 ```js
-const model = Live2DModel.fromSync('shizuku.model.json');
+const model = Live2DModel.fromSync("shizuku.model3.json");
 
-model.once('settingsJSONLoaded', (json) => {
+model.once("settingsJSONLoaded", (json) => {
     // e.g. customize the layout before it's applied to the model
     json.layout = {
         ...json.layout,
@@ -154,9 +128,9 @@ model.once('settingsJSONLoaded', (json) => {
     };
 });
 
-model.once('settingsLoaded', (settings) => {
+model.once("settingsLoaded", (settings) => {
     // e.g. set another URL to the model
-    settings.url = 'alternative/path/to/model';
+    settings.url = "alternative/path/to/model";
 });
 ```
 
@@ -165,13 +139,13 @@ When all essential resources have been loaded, a `ready` event is emitted. Then 
 After that, when all resources, including the optional resources, have been loaded, a `load` event is emitted.
 
 ```js
-const model = Live2DModel.fromSync('shizuku.model.json');
+const model = Live2DModel.fromSync("shizuku.model3.json");
 
-model.once('ready', () => {
+model.once("ready", () => {
     // now it's safe to display the model, though not recommended because
     // it's likely to look weird due to missing optional resources
     app.stage.addChild(model);
-    model.motion('tap_body');
+    model.motion("tap_body");
 });
 ```
 
@@ -236,7 +210,7 @@ This is the default behavior. Model will use `PIXI.Ticker.shared` to automatical
 The easiest way to achieve this is to import a full build of Pixi and expose `PIXI` to global scope, so that the model can access Ticker from `window.PIXI.Ticker`:
 
 ```js
-import * as PIXI from 'pixi.js';
+import * as PIXI from "pixi.js";
 
 window.PIXI = PIXI;
 ```
@@ -244,8 +218,8 @@ window.PIXI = PIXI;
 Otherwise, you need to manually register the `Ticker` and `TickerPlugin`:
 
 ```js
-import { Application } from '@pixi/app';
-import { Ticker, TickerPlugin } from '@pixi/ticker';
+import { Application } from "@pixi/app";
+import { Ticker, TickerPlugin } from "@pixi/ticker";
 
 Application.registerPlugin(TickerPlugin);
 Live2DModel.registerTicker(Ticker);
@@ -258,9 +232,9 @@ To manually update the model, you need to first disable the `autoUpdate` option,
 Using Ticker:
 
 ```js
-import { Ticker } from '@pixi/ticker';
+import { Ticker } from "@pixi/ticker";
 
-const model = await Live2DModel.from('shizuku.model.json', { autoUpdate: false });
+const model = await Live2DModel.from("shizuku.model3.json", { autoUpdate: false });
 
 const ticker = new Ticker();
 
@@ -270,7 +244,7 @@ ticker.add(() => model.update(ticker.elapsedMS));
 Using `requestAnimationFrame()`:
 
 ```js
-const model = await Live2DModel.from('shizuku.model.json', { autoUpdate: false });
+const model = await Live2DModel.from("shizuku.model3.json", { autoUpdate: false });
 
 let then = performance.now();
 
