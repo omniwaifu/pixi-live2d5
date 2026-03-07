@@ -1,49 +1,49 @@
 import { ModelSettings } from "@/cubism-common/ModelSettings";
-import { applyMixins } from "@/utils";
-import type { CubismSpec } from "@cubism/CubismSpec";
-import { CubismModelSettingJson } from "@cubism/cubismmodelsettingjson";
+import { CubismFramework } from "@cubism/live2dcubismframework";
+import type {
+    Cubism5ExpressionDefinition,
+    Cubism5HitArea,
+    Cubism5ModelJSON,
+    Cubism5Motions,
+} from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-export interface Cubism5ModelSettings extends CubismModelSettingJson {}
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class Cubism5ModelSettings extends ModelSettings {
-    declare json: CubismSpec.ModelJSON;
+    declare json: Cubism5ModelJSON;
 
     moc!: string;
     textures!: string[];
-    hitAreas?: any[];
-    motions?: any;
-    expressions?: any[];
+    layout?: Record<string, number>;
+    hitAreas?: Cubism5HitArea[];
+    motions?: Cubism5Motions;
+    expressions?: Cubism5ExpressionDefinition[];
+    userData?: string;
 
-    static isValidJSON(json: any): json is CubismSpec.ModelJSON {
+    static isValidJSON(json: unknown): json is Cubism5ModelJSON {
+        const maybeSettings = json as Partial<Cubism5ModelJSON> | undefined;
+        const fileReferences = maybeSettings?.FileReferences;
+
         return (
-            !!json?.FileReferences &&
-            typeof json.FileReferences.Moc === "string" &&
-            json.FileReferences.Textures?.length > 0 &&
+            !!fileReferences &&
+            typeof fileReferences.Moc === "string" &&
+            Array.isArray(fileReferences.Textures) &&
+            fileReferences.Textures.length > 0 &&
             // textures must be an array of strings
-            json.FileReferences.Textures.every((item: any) => typeof item === "string")
+            fileReferences.Textures.every((item) => typeof item === "string")
         );
     }
 
-    constructor(json: CubismSpec.ModelJSON & { url: string }) {
+    constructor(json: Cubism5ModelJSON) {
         super(json);
 
         if (!Cubism5ModelSettings.isValidJSON(json)) {
             throw new TypeError("Invalid JSON.");
         }
 
-        // Convert JSON object back to ArrayBuffer for Cubism 5 API
-        const jsonString = JSON.stringify(json);
-        const buffer = new TextEncoder().encode(jsonString);
-        Object.assign(this, new CubismModelSettingJson(buffer.buffer, buffer.byteLength));
-
-        // Set up the essential properties from JSON AFTER Object.assign
-        // so they don't get overwritten by the Cubism SDK object
         this.moc = json.FileReferences.Moc;
         this.textures = json.FileReferences.Textures;
+        this.layout = json.Layout;
+        this.userData = json.FileReferences.UserData;
 
-        // Set optional properties
         if (json.FileReferences.Physics) {
             this.physics = json.FileReferences.Physics;
         }
@@ -67,28 +67,142 @@ export class Cubism5ModelSettings extends ModelSettings {
         }
     }
 
+    getModelFileName(): string {
+        return this.moc;
+    }
+
+    getTextureCount(): number {
+        return this.textures.length;
+    }
+
+    getTextureDirectory(): string {
+        const firstTexture = this.textures[0];
+
+        if (!firstTexture?.includes("/")) {
+            return "";
+        }
+
+        return firstTexture.slice(0, firstTexture.lastIndexOf("/"));
+    }
+
+    getTextureFileName(index: number): string {
+        return this.textures[index] ?? "";
+    }
+
+    getHitAreasCount(): number {
+        return this.hitAreas?.length ?? 0;
+    }
+
+    getHitAreaId(index: number): any {
+        const hitArea = this.hitAreas?.[index];
+
+        return hitArea ? CubismFramework.getIdManager().getId(hitArea.Id) : undefined;
+    }
+
+    getHitAreaName(index: number): string {
+        return this.hitAreas?.[index]?.Name ?? "";
+    }
+
+    getPhysicsFileName(): string {
+        return this.physics ?? "";
+    }
+
+    getPoseFileName(): string {
+        return this.pose ?? "";
+    }
+
+    getExpressionCount(): number {
+        return this.expressions?.length ?? 0;
+    }
+
+    getExpressionName(index: number): string {
+        return this.expressions?.[index]?.Name ?? "";
+    }
+
+    getExpressionFileName(index: number): string {
+        return this.expressions?.[index]?.File ?? "";
+    }
+
+    getMotionGroupCount(): number {
+        return Object.keys(this.motions ?? {}).length;
+    }
+
+    getMotionGroupName(index: number): string {
+        return Object.keys(this.motions ?? {})[index] ?? "";
+    }
+
+    getMotionCount(groupName: string): number {
+        return this.motions?.[groupName]?.length ?? 0;
+    }
+
+    getMotionFileName(groupName: string, index: number): string {
+        return this.motions?.[groupName]?.[index]?.File ?? "";
+    }
+
+    getMotionSoundFileName(groupName: string, index: number): string {
+        return this.motions?.[groupName]?.[index]?.Sound ?? "";
+    }
+
+    getMotionFadeInTimeValue(groupName: string, index: number): number {
+        return this.motions?.[groupName]?.[index]?.FadeInTime ?? -1;
+    }
+
+    getMotionFadeOutTimeValue(groupName: string, index: number): number {
+        return this.motions?.[groupName]?.[index]?.FadeOutTime ?? -1;
+    }
+
+    getUserDataFile(): string {
+        return this.userData ?? "";
+    }
+
+    getLayoutMap(outLayoutMap: { setValue(key: string, value: number): void }): boolean {
+        if (!this.layout) {
+            return false;
+        }
+
+        Object.entries(this.layout).forEach(([key, value]) => {
+            outLayoutMap.setValue(key, value);
+        });
+
+        return true;
+    }
+
+    private getGroupParameterIds(groupName: string): string[] {
+        return this.json.Groups?.find((group) => group.Name === groupName)?.Ids.slice() ?? [];
+    }
+
+    getEyeBlinkParameterCount(): number {
+        return this.getGroupParameterIds("EyeBlink").length;
+    }
+
+    getEyeBlinkParameterId(index: number): any {
+        const parameterId = this.getGroupParameterIds("EyeBlink")[index];
+
+        return parameterId ? CubismFramework.getIdManager().getId(parameterId) : undefined;
+    }
+
     /**
      * Get all eye blink parameter IDs as an array
      */
     getEyeBlinkParameters() {
-        const count = this.getEyeBlinkParameterCount();
-        const parameters = [];
-        for (let i = 0; i < count; i++) {
-            parameters.push(this.getEyeBlinkParameterId(i));
-        }
-        return parameters;
+        return this.getGroupParameterIds("EyeBlink");
+    }
+
+    getLipSyncParameterCount(): number {
+        return this.getGroupParameterIds("LipSync").length;
+    }
+
+    getLipSyncParameterId(index: number): any {
+        const parameterId = this.getGroupParameterIds("LipSync")[index];
+
+        return parameterId ? CubismFramework.getIdManager().getId(parameterId) : undefined;
     }
 
     /**
      * Get all lip sync parameter IDs as an array
      */
     getLipSyncParameters() {
-        const count = this.getLipSyncParameterCount();
-        const parameters = [];
-        for (let i = 0; i < count; i++) {
-            parameters.push(this.getLipSyncParameterId(i));
-        }
-        return parameters;
+        return this.getGroupParameterIds("LipSync");
     }
 
     replaceFiles(replace: (file: string, path: string) => string) {
@@ -119,5 +233,3 @@ export class Cubism5ModelSettings extends ModelSettings {
         }
     }
 }
-
-applyMixins(Cubism5ModelSettings, [CubismModelSettingJson]);

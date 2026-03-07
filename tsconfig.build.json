@@ -1,6 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noUncheckedIndexedAccess": false
+    "strict": false,
+    "noImplicitAny": false,
+    "noUncheckedIndexedAccess": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false
   }
 }

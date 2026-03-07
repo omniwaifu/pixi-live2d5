@@ -1,16 +1,18 @@
 import { Cubism5InternalModel } from "@/cubism5/Cubism5InternalModel";
 import { Cubism5ModelSettings } from "@/cubism5/Cubism5ModelSettings";
+import { toCubismJsonBuffer } from "@/cubism5/serialization";
 import { cubism5Ready } from "@/cubism5/setup";
 import type { Live2DFactoryOptions } from "@/factory/Live2DFactory";
 import { Live2DFactory } from "@/factory/Live2DFactory";
-import type { CubismSpec } from "@cubism/CubismSpec";
 import { CubismPose } from "@cubism/effect/cubismpose";
 import { CubismMoc } from "@cubism/model/cubismmoc";
 import type { CubismModel } from "@cubism/model/cubismmodel";
 import { CubismPhysics } from "@cubism/physics/cubismphysics";
+import type { Cubism5ModelJSON } from "./types";
 
 Live2DFactory.registerRuntime({
     version: 5,
+    expressionDataType: "text",
 
     ready: cubism5Ready,
 
@@ -29,7 +31,7 @@ Live2DFactory.registerRuntime({
     },
 
     createModelSettings(json: object): Cubism5ModelSettings {
-        return new Cubism5ModelSettings(json as CubismSpec.ModelJSON & { url: string });
+        return new Cubism5ModelSettings(json as Cubism5ModelJSON);
     },
 
     createCoreModel(data: ArrayBuffer, options?: Live2DFactoryOptions): CubismModel {
@@ -77,50 +79,15 @@ Live2DFactory.registerRuntime({
     },
 
     createPhysics(coreModel: CubismModel, data: any): CubismPhysics {
-        console.log("Creating physics with data type:", typeof data, "data:", data);
-        try {
-            // Try to use JSON object directly, bypassing ArrayBuffer conversion
-            if (typeof data === "object") {
-                const jsonString = JSON.stringify(data);
-                console.log("Physics JSON string length:", jsonString.length);
-                const buffer = new TextEncoder().encode(jsonString);
-                console.log("Physics buffer length:", buffer.byteLength);
-                return CubismPhysics.create(buffer.buffer, buffer.byteLength);
-            }
-            return CubismPhysics.create(data);
-        } catch (error) {
-            console.error("Physics creation error:", error);
-            throw error;
-        }
+        const { buffer, byteLength } = toCubismJsonBuffer(data);
+
+        return CubismPhysics.create(buffer, byteLength);
     },
 
     createPose(coreModel: CubismModel, data: any): CubismPose {
-        console.log("=== POSE CREATION DEBUG ===");
-        console.log("Data type:", typeof data);
-        console.log("Data structure:", data);
-        console.log("Data keys:", typeof data === "object" ? Object.keys(data) : "N/A");
-        
-        try {
-            if (typeof data === "object") {
-                const jsonString = JSON.stringify(data);
-                console.log("JSON string preview:", jsonString.substring(0, 200) + "...");
-                console.log("JSON string length:", jsonString.length);
-                
-                const buffer = new TextEncoder().encode(jsonString);
-                console.log("ArrayBuffer length:", buffer.byteLength);
-                console.log("First 32 bytes:", Array.from(buffer.slice(0, 32)));
-                
-                const result = CubismPose.create(buffer.buffer, buffer.byteLength);
-                console.log("Pose creation result:", result);
-                return result;
-            }
-            return CubismPose.create(data);
-        } catch (error) {
-            console.error("=== POSE CREATION FAILED ===");
-            console.error("Error:", error);
-            console.error("Stack:", error.stack);
-            throw error;
-        }
+        const { buffer, byteLength } = toCubismJsonBuffer(data);
+
+        return CubismPose.create(buffer, byteLength);
     },
 });
 

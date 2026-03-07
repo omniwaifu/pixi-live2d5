@@ -1,7 +1,7 @@
 // run this to tell git not to track this file
 // git update-index --skip-worktree test/playground/index.ts
 
-import { Application, Ticker, Sprite, Texture } from "pixi.js";
+import { Application, Sprite, Texture, Ticker, type FederatedPointerEvent } from "pixi.js";
 import { Live2DModel } from "../src";
 import { HitAreaFrames } from "../src/extra";
 import { config } from "../src/config";
@@ -11,6 +11,7 @@ Live2DModel.registerTicker(Ticker);
 // Enable sound playback
 config.sound = true;
 
+const DRAG_THRESHOLD = 6;
 const cubism5Model = "/test/assets/Mao/Mao.model3.json";
 
 (async function main() {
@@ -26,7 +27,9 @@ const cubism5Model = "/test/assets/Mao/Mao.model3.json";
     });
     (window as any).app = app;
 
-    const model5 = await Live2DModel.from(cubism5Model);
+    const model5 = await Live2DModel.from(cubism5Model, {
+        autoHitTest: false,
+    });
 
     app.stage.addChild(model5);
 
@@ -52,27 +55,60 @@ const cubism5Model = "/test/assets/Mao/Mao.model3.json";
             model5.expression();
         }
     });
-
-    // Set up mouse tracking
-    setupMouseTracking(model5, app.canvas as HTMLCanvasElement);
 })();
 
 function draggable(model: Live2DModel) {
-    model.eventMode = 'static';
-    model.cursor = 'pointer';
-    model.on("pointerdown", (e: any) => {
-        (model as any).dragging = true;
-        (model as any)._pointerX = e.global.x - model.x;
-        (model as any)._pointerY = e.global.y - model.y;
+    const state = {
+        active: false,
+        moved: false,
+        startX: 0,
+        startY: 0,
+        pointerOffsetX: 0,
+        pointerOffsetY: 0,
+    };
+
+    model.eventMode = "static";
+    model.cursor = "grab";
+
+    model.on("pointerdown", (event: FederatedPointerEvent) => {
+        state.active = true;
+        state.moved = false;
+        state.startX = event.global.x;
+        state.startY = event.global.y;
+        state.pointerOffsetX = event.global.x - model.x;
+        state.pointerOffsetY = event.global.y - model.y;
+        model.cursor = "grabbing";
     });
-    model.on("pointermove", (e: any) => {
-        if ((model as any).dragging) {
-            model.position.x = e.global.x - (model as any)._pointerX;
-            model.position.y = e.global.y - (model as any)._pointerY;
+
+    model.on("globalpointermove", (event: FederatedPointerEvent) => {
+        if (!state.active) {
+            return;
+        }
+
+        const distance = Math.hypot(event.global.x - state.startX, event.global.y - state.startY);
+
+        if (distance >= DRAG_THRESHOLD) {
+            state.moved = true;
+        }
+
+        model.position.set(
+            event.global.x - state.pointerOffsetX,
+            event.global.y - state.pointerOffsetY,
+        );
+    });
+
+    const stopDragging = () => {
+        state.active = false;
+        model.cursor = "grab";
+    };
+
+    model.on("pointerupoutside", stopDragging);
+    model.on("pointerup", stopDragging);
+    model.on("pointertap", (event: FederatedPointerEvent) => {
+        if (!state.moved) {
+            model.tap(event.global.x, event.global.y);
         }
     });
-    model.on("pointerupoutside", () => ((model as any).dragging = false));
-    model.on("pointerup", () => ((model as any).dragging = false));
 }
 
 function addFrame(model: Live2DModel) {
@@ -112,26 +148,4 @@ function checkbox(name: string, onChange: (checked: boolean) => void) {
     });
 
     onChange(checkbox.checked);
-}
-
-function setupMouseTracking(model: Live2DModel, canvas: HTMLCanvasElement) {
-    const onMouseMove = (event: MouseEvent) => {
-        if (!canvas) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        
-        // Convert screen coordinates to canvas coordinates
-        const canvasX = event.clientX - rect.left;
-        const canvasY = event.clientY - rect.top;
-        
-        // Convert to normalized coordinates [-1, 1]
-        const normalizedX = (canvasX / rect.width) * 2 - 1;
-        const normalizedY = -((canvasY / rect.height) * 2 - 1);
-        
-        // Apply to focus controller
-        model.internalModel.focusController.focus(normalizedX, normalizedY);
-    };
-    
-    // Add global mouse move listener
-    document.addEventListener('mousemove', onMouseMove);
 }

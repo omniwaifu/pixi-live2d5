@@ -5,4 +5,5 @@ export * from "./Cubism5InternalModel";
 export * from "./Cubism5ModelSettings";
 export * from "./Cubism5MotionManager";
 export * from "./factory";
+export * from "./types";
 export * from "./setup";

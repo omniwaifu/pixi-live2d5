@@ -195,7 +195,7 @@ export const createInternalModel: Middleware<Live2DFactoryContext> = async (cont
             throw new Error("Invalid moc data");
         }
 
-        const coreModel = runtime.createCoreModel(modelData);
+        const coreModel = runtime.createCoreModel(modelData, context.options);
 
         context.internalModel = runtime.createInternalModel(coreModel, settings, context.options);
 

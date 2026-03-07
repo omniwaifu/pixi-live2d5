@@ -21,7 +21,7 @@ export abstract class ModelSettings {
     url: string;
 
     /**
-     * Relative path of he moc file, typically ends with `.moc` in Cubism 2 and `.moc3` in Cubism 4.
+     * Relative path of the moc file, which typically ends with `.moc3` in this fork.
      */
     abstract moc: string;
 
@@ -51,7 +51,7 @@ export abstract class ModelSettings {
 
         if (typeof url !== "string") {
             // this is not allowed because it'll typically result in errors, including a
-            // fatal error - an OOM that crashes the browser while initializing this cubism2 model,
+            // fatal error - an OOM that crashes the browser while initializing an invalid model,
             // I'm not kidding!
             throw new TypeError("The `url` field in settings JSON must be defined as a string.");
         }

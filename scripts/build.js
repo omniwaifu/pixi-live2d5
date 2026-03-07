@@ -14,19 +14,19 @@ const entries = [
 const profiles = entries
     .filter(({ entry }) => existsSync(resolve(__dirname, "..", entry)))
     .flatMap(({ entry, name }) =>
-    [false, true].map((minify) => ({
-        build: {
-            emptyOutDir: false,
-            minify: minify && "terser",
-            lib: {
-                formats: minify ? ["umd"] : ["es", "umd"],
-                entry: resolve(__dirname, "..", entry),
-                fileName: (format) =>
-                    `${name}${format === "umd" ? (minify ? ".min" : "") : "." + format}.js`,
+        [false, true].map((minify) => ({
+            build: {
+                emptyOutDir: false,
+                minify: minify && "terser",
+                lib: {
+                    formats: minify ? ["umd"] : ["es", "umd"],
+                    entry: resolve(__dirname, "..", entry),
+                    fileName: (format) =>
+                        `${name}${format === "umd" ? (minify ? ".min" : "") : "." + format}.js`,
+                },
             },
-        },
-    })),
-);
+        })),
+    );
 
 async function main() {
     for (const profile of profiles) {

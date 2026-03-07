@@ -9,8 +9,7 @@ import packageJson from "./package.json";
 import { testRpcPlugin } from "./test/rpc/rpc-server";
 
 const cubismSubmodule = path.resolve(__dirname, "cubism");
-const cubism2Core = path.resolve(__dirname, "core/live2d.min.js");
-const cubism4Core = path.resolve(__dirname, "core/live2dcubismcore.js");
+const cubismCore = path.resolve(__dirname, "core/live2dcubismcore.js");
 
 if (!existsSync(cubismSubmodule) || !existsSync(path.resolve(cubismSubmodule, "package.json"))) {
     throw new Error(
@@ -18,7 +17,7 @@ if (!existsSync(cubismSubmodule) || !existsSync(path.resolve(cubismSubmodule, "p
     );
 }
 
-if (!existsSync(cubism2Core) || !existsSync(cubism4Core)) {
+if (!existsSync(cubismCore)) {
     throw new Error("Cubism Core not found. Please run `npm run setup` to download them.");
 }
 
@@ -85,12 +84,8 @@ export default defineConfig(({ command, mode }) => {
                 transform(code, id) {
                     if (id.includes("test/load-cores.ts")) {
                         code = code.replace(
-                            "__CUBISM2_CORE_SOURCE__",
-                            readFileSync(cubism2Core, "utf-8"),
-                        );
-                        code = code.replace(
-                            "__CUBISM4_CORE_SOURCE__",
-                            readFileSync(cubism4Core, "utf-8"),
+                            '"__CUBISM_CORE_SOURCE__"',
+                            JSON.stringify(readFileSync(cubismCore, "utf-8")),
                         );
 
                         return { code };
@@ -99,7 +94,7 @@ export default defineConfig(({ command, mode }) => {
             },
         ],
         test: {
-            include: ["**/*.test.ts", "**/*.test.js"],
+            include: ["**/*.browser.test.ts", "**/*.browser.test.js"],
             browser: {
                 enabled: true,
                 name: "chrome",

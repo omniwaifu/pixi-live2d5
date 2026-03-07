@@ -6,13 +6,9 @@ import { Cubism5MotionManager } from "@/cubism5/Cubism5MotionManager";
 import { CubismDefaultParameterId } from "@cubism/cubismdefaultparameterid";
 import { BreathParameterData, CubismBreath } from "@cubism/effect/cubismbreath";
 import { CubismEyeBlink } from "@cubism/effect/cubismeyeblink";
-import type { CubismPose } from "@cubism/effect/cubismpose";
 import { CubismFramework } from "@cubism/live2dcubismframework";
 import { CubismMatrix44 } from "@cubism/math/cubismmatrix44";
 import { csmVector } from "@cubism/type/csmvector";
-import type { CubismModel } from "@cubism/model/cubismmodel";
-import type { CubismModelUserData } from "@cubism/model/cubismmodeluserdata";
-import type { CubismPhysics } from "@cubism/physics/cubismphysics";
 import { CubismRenderer_WebGL } from "@cubism/rendering/cubismrenderer_webgl";
 import { CubismShaderManager_WebGL } from "@cubism/rendering/cubismshader_webgl";
 import { Matrix } from "pixi.js";
@@ -22,7 +18,7 @@ const tempMatrix = new CubismMatrix44();
 
 export class Cubism5InternalModel extends InternalModel {
     settings: Cubism5ModelSettings;
-    coreModel: CubismModel;
+    coreModel: any;
     motionManager: Cubism5MotionManager;
 
     lipSync = true;
@@ -30,24 +26,24 @@ export class Cubism5InternalModel extends InternalModel {
     breath = CubismBreath.create();
     eyeBlink?: CubismEyeBlink;
 
-    declare pose?: CubismPose;
-    declare physics?: CubismPhysics;
+    declare pose?: any;
+    declare physics?: any;
 
     // what's this for?
-    userData?: CubismModelUserData;
+    userData?: any;
 
-    renderer = new CubismRenderer_WebGL();
+    renderer: any = new CubismRenderer_WebGL();
 
     // Use actual parameter names from the Mao model instead of CubismDefaultParameterId
     idParamAngleX = "ParamAngleX";
-    idParamAngleY = "ParamAngleY"; 
+    idParamAngleY = "ParamAngleY";
     idParamAngleZ = "ParamAngleZ";
     idParamEyeBallX = "ParamEyeBallX";
     idParamEyeBallY = "ParamEyeBallY";
     idParamBodyAngleX = "ParamBodyAngleX";
-    idParamBreath = CubismDefaultParameterId.ParamBreath; // Keep this as fallback
+    idParamBreath: any = CubismDefaultParameterId.ParamBreath; // Keep this as fallback
 
-    // parameter indices, cached for better performance (same as Cubism 2)
+    // Parameter indices are cached up front to avoid repeated lookups during updates.
     eyeballXParamIndex: number;
     eyeballYParamIndex: number;
     angleXParamIndex: number;
@@ -68,27 +64,33 @@ export class Cubism5InternalModel extends InternalModel {
      */
     protected centeringTransform = new Matrix();
 
-    constructor(
-        coreModel: CubismModel,
-        settings: Cubism5ModelSettings,
-        options?: InternalModelOptions,
-    ) {
+    constructor(coreModel: any, settings: Cubism5ModelSettings, options?: InternalModelOptions) {
         super();
 
         this.coreModel = coreModel;
         this.settings = settings;
         this.motionManager = new Cubism5MotionManager(settings, options);
 
-        // Cache parameter indices like Cubism 2 does
-        // Convert string parameter names to CubismIdHandle and get indices
-        this.eyeballXParamIndex = this.coreModel.getParameterIndex(CubismFramework.getIdManager().getId(this.idParamEyeBallX));
-        this.eyeballYParamIndex = this.coreModel.getParameterIndex(CubismFramework.getIdManager().getId(this.idParamEyeBallY));
-        this.angleXParamIndex = this.coreModel.getParameterIndex(CubismFramework.getIdManager().getId(this.idParamAngleX));
-        this.angleYParamIndex = this.coreModel.getParameterIndex(CubismFramework.getIdManager().getId(this.idParamAngleY));
-        this.angleZParamIndex = this.coreModel.getParameterIndex(CubismFramework.getIdManager().getId(this.idParamAngleZ));
-        this.bodyAngleXParamIndex = this.coreModel.getParameterIndex(CubismFramework.getIdManager().getId(this.idParamBodyAngleX));
+        // Convert string parameter names to CubismIdHandle values and cache the indices.
+        this.eyeballXParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamEyeBallX),
+        );
+        this.eyeballYParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamEyeBallY),
+        );
+        this.angleXParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamAngleX),
+        );
+        this.angleYParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamAngleY),
+        );
+        this.angleZParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamAngleZ),
+        );
+        this.bodyAngleXParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamBodyAngleX),
+        );
         this.breathParamIndex = this.coreModel.getParameterIndex(this.idParamBreath);
-
 
         this.init();
     }
@@ -100,11 +102,43 @@ export class Cubism5InternalModel extends InternalModel {
             this.eyeBlink = CubismEyeBlink.create(this.settings);
         }
 
-        const breathParams = new csmVector();
-        breathParams.pushBack(new BreathParameterData(this.idParamAngleX, 0.0, 15.0, 6.5345, 0.5));
-        breathParams.pushBack(new BreathParameterData(this.idParamAngleY, 0.0, 8.0, 3.5345, 0.5));
-        breathParams.pushBack(new BreathParameterData(this.idParamAngleZ, 0.0, 10.0, 5.5345, 0.5));
-        breathParams.pushBack(new BreathParameterData(this.idParamBodyAngleX, 0.0, 4.0, 15.5345, 0.5));
+        const breathParams = new csmVector<any>();
+        breathParams.pushBack(
+            new BreathParameterData(
+                CubismFramework.getIdManager().getId(this.idParamAngleX),
+                0.0,
+                15.0,
+                6.5345,
+                0.5,
+            ),
+        );
+        breathParams.pushBack(
+            new BreathParameterData(
+                CubismFramework.getIdManager().getId(this.idParamAngleY),
+                0.0,
+                8.0,
+                3.5345,
+                0.5,
+            ),
+        );
+        breathParams.pushBack(
+            new BreathParameterData(
+                CubismFramework.getIdManager().getId(this.idParamAngleZ),
+                0.0,
+                10.0,
+                5.5345,
+                0.5,
+            ),
+        );
+        breathParams.pushBack(
+            new BreathParameterData(
+                CubismFramework.getIdManager().getId(this.idParamBodyAngleX),
+                0.0,
+                4.0,
+                15.5345,
+                0.5,
+            ),
+        );
         breathParams.pushBack(new BreathParameterData(this.idParamBreath, 0.0, 0.5, 3.2345, 0.5));
         this.breath.setParameters(breathParams);
 
@@ -148,16 +182,18 @@ export class Cubism5InternalModel extends InternalModel {
 
     updateWebGLContext(gl: WebGLRenderingContext, glContextID: number): void {
         // reset resources that were bound to previous WebGL context
-        this.renderer.firstDraw = true;
-        this.renderer._bufferData = {
+        const renderer = this.renderer as any;
+
+        renderer.firstDraw = true;
+        renderer._bufferData = {
             vertex: null,
             uv: null,
             index: null,
         };
-        this.renderer.startUp(gl);
-        this.renderer._clippingManager._currentFrameNo = glContextID;
-        this.renderer._clippingManager._maskTexture = undefined;
-        CubismShaderManager_WebGL.getInstance()._shaderSets = [];
+        renderer.startUp(gl);
+        renderer._clippingManager._currentFrameNo = glContextID;
+        renderer._clippingManager._maskTexture = undefined;
+        (CubismShaderManager_WebGL.getInstance() as any)._shaderSets = [];
     }
 
     bindTexture(index: number, texture: WebGLTexture): void {
@@ -166,14 +202,17 @@ export class Cubism5InternalModel extends InternalModel {
 
     protected getHitAreaDefs(): CommonHitArea[] {
         const drawableIds = this.getDrawableIDs();
-        return this.settings.hitAreas?.map((hitArea) => {
-            const index = drawableIds.indexOf(hitArea.Id);
-            return {
-                id: hitArea.Id,
-                name: hitArea.Name,
-                index: index,
-            };
-        }) ?? [];
+        return (
+            this.settings.hitAreas?.map((hitArea) => {
+                const index = drawableIds.indexOf(hitArea.Id);
+
+                return {
+                    id: hitArea.Id,
+                    name: hitArea.Name,
+                    index,
+                };
+            }) ?? []
+        );
     }
 
     getDrawableIDs(): string[] {
@@ -257,7 +296,6 @@ export class Cubism5InternalModel extends InternalModel {
     updateFocus() {
         // Skip if any parameter indices are invalid
         if (this.eyeballXParamIndex < 0 || this.angleXParamIndex < 0) {
-            console.log("Invalid parameter indices, skipping focus update");
             return;
         }
 
@@ -266,14 +304,19 @@ export class Cubism5InternalModel extends InternalModel {
         const eyeY = this.focusController.y;
         const angleX = this.focusController.x * 30;
         const angleY = this.focusController.y * 30;
-        
-        // Apply focus parameters without excessive logging
+
         this.coreModel.setParameterValueByIndex(this.eyeballXParamIndex, eyeX);
         this.coreModel.setParameterValueByIndex(this.eyeballYParamIndex, eyeY);
         this.coreModel.setParameterValueByIndex(this.angleXParamIndex, angleX);
         this.coreModel.setParameterValueByIndex(this.angleYParamIndex, angleY);
-        this.coreModel.setParameterValueByIndex(this.angleZParamIndex, this.focusController.x * this.focusController.y * -30);
-        this.coreModel.setParameterValueByIndex(this.bodyAngleXParamIndex, this.focusController.x * 10);
+        this.coreModel.setParameterValueByIndex(
+            this.angleZParamIndex,
+            this.focusController.x * this.focusController.y * -30,
+        );
+        this.coreModel.setParameterValueByIndex(
+            this.bodyAngleXParamIndex,
+            this.focusController.x * 10,
+        );
     }
 
     updateNaturalMovements(dt: DOMHighResTimeStamp, now: DOMHighResTimeStamp) {

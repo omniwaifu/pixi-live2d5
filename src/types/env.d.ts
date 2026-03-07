@@ -1,13 +1,14 @@
 /// <reference types="vite/client" />
 
-declare const __DEV__: boolean;
+declare global {
+    let __DEV__: boolean | undefined;
+    let __VERSION__: string | undefined;
+    const __HEADLESS__: string;
+    let PIXI:
+        | undefined
+        | (typeof import("pixi.js") & {
+              live2d: typeof import("../index") & typeof import("../extra");
+          });
+}
 
-declare const __VERSION__: string;
-
-declare const __HEADLESS__: string;
-
-declare let PIXI:
-    | undefined
-    | (typeof import("pixi.js") & {
-          live2d: typeof import("../index") & typeof import("../extra");
-      });
+export {};

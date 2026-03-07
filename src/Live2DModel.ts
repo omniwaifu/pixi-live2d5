@@ -28,7 +28,7 @@ export type Live2DConstructor = { new (options?: Live2DModelOptions): Live2DMode
  * A wrapper that allows the Live2D model to be used as a DisplayObject in PixiJS.
  *
  * ```js
- * const model = await Live2DModel.from('shizuku.model.json');
+ * const model = await Live2DModel.from('shizuku.model3.json');
  * container.add(model);
  * ```
  * @emits {@link Live2DModelEvents}
@@ -63,7 +63,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
      *
      * ```js
      * // no `await` here as it's not a Promise
-     * const model = Live2DModel.fromSync('shizuku.model.json');
+     * const model = Live2DModel.fromSync('shizuku.model3.json');
      *
      * // these will cause errors!
      * // app.stage.addChild(model);
@@ -324,13 +324,17 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
         for (let i = 0; i < this.textures.length; i++) {
             const texture = this.textures[i]!;
 
-            gl.pixelStorei(WebGLRenderingContext.UNPACK_FLIP_Y_WEBGL, this.internalModel.textureFlipY);
+            gl.pixelStorei(
+                WebGLRenderingContext.UNPACK_FLIP_Y_WEBGL,
+                this.internalModel.textureFlipY,
+            );
 
             // Ensure Pixi has created/uploaded the GPU texture.
             (renderer as any).texture.bind(texture, 0);
 
             // Bind the underlying WebGLTexture into Live2D core.
-            const glTexture = (renderer as any).texture.getGlSource(texture.source).texture as WebGLTexture;
+            const glTexture = (renderer as any).texture.getGlSource(texture.source)
+                .texture as WebGLTexture;
 
             this.internalModel.bindTexture(i, glTexture);
         }
@@ -347,9 +351,8 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
             this.deltaTime = 0;
         }
 
-        const projectionMatrix = (renderer as any).globalUniforms?.globalUniformData?.projectionMatrix as
-            | Matrix
-            | undefined;
+        const projectionMatrix = (renderer as any).globalUniforms?.globalUniformData
+            ?.projectionMatrix as Matrix | undefined;
 
         if (!projectionMatrix) {
             return;
@@ -367,11 +370,21 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
             | undefined;
         const viewPortCache = renderTargetAdaptor?._viewPortCache;
         if (viewPortCache) {
-            gl.viewport(viewPortCache.x, viewPortCache.y, viewPortCache.width, viewPortCache.height);
+            gl.viewport(
+                viewPortCache.x,
+                viewPortCache.y,
+                viewPortCache.width,
+                viewPortCache.height,
+            );
         }
         const clearColorCache = renderTargetAdaptor?._clearColorCache;
         if (clearColorCache && clearColorCache.length === 4) {
-            gl.clearColor(clearColorCache[0]!, clearColorCache[1]!, clearColorCache[2]!, clearColorCache[3]!);
+            gl.clearColor(
+                clearColorCache[0]!,
+                clearColorCache[1]!,
+                clearColorCache[2]!,
+                clearColorCache[3]!,
+            );
         }
         // IMPORTANT: Don't call `renderer.resetState()` here. It also resets the renderTarget system,
         // which can break the active render pass and freeze the frame.
@@ -400,7 +413,9 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
         this.emit("destroy");
 
         if (typeof options === "object" && options?.texture) {
-            const destroySource = Boolean((options as any).textureSource ?? (options as any).baseTexture);
+            const destroySource = Boolean(
+                (options as any).textureSource ?? (options as any).baseTexture,
+            );
             this.textures.forEach((texture) => texture.destroy(destroySource));
         }
 

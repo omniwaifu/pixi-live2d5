@@ -1,10 +1,18 @@
 import type { Live2DModel } from "@/Live2DModel";
-import { Graphics, Rectangle, Text, TextStyle, type FederatedPointerEvent } from "pixi.js";
+import {
+    Container,
+    Graphics,
+    Rectangle,
+    Text,
+    TextStyle,
+    type FederatedPointerEvent,
+} from "pixi.js";
 
 const tempBounds = new Rectangle();
 
-export class HitAreaFrames extends Graphics {
+export class HitAreaFrames extends Container {
     initialized = false;
+    graphics = new Graphics();
 
     texts: Text[] = [];
 
@@ -16,23 +24,34 @@ export class HitAreaFrames extends Graphics {
         super();
 
         this.eventMode = "static";
+        this.addChild(this.graphics);
 
         this.on("added", this.init).on("globalpointermove", this.onPointerMove);
         this.onRender = () => this.redraw();
     }
 
     init() {
+        if (this.initialized) {
+            return;
+        }
+
+        this.initialized = true;
         const internalModel = (this.parent as Live2DModel).internalModel;
 
         const textStyle = new TextStyle({
             fontSize: 24,
             fill: "#ffffff",
-            stroke: "#000000",
-            strokeThickness: 4,
+            stroke: {
+                color: "#000000",
+                width: 4,
+            },
         });
 
         this.texts = Object.keys(internalModel.hitAreas).map((hitAreaName) => {
-            const text = new Text(hitAreaName, textStyle);
+            const text = new Text({
+                text: hitAreaName,
+                style: textStyle,
+            });
 
             text.visible = false;
 
@@ -55,18 +74,11 @@ export class HitAreaFrames extends Graphics {
 
         // extract scale from the transform matrix, and invert it to ease following calculation
         // https://math.stackexchange.com/a/13165
-        const scale =
-            1 /
-            Math.sqrt(this.worldTransform.a ** 2 + this.worldTransform.b ** 2);
+        const scale = 1 / Math.sqrt(this.worldTransform.a ** 2 + this.worldTransform.b ** 2);
 
-        this.clear();
+        this.graphics.clear();
 
         this.texts.forEach((text) => {
-            this.lineStyle({
-                width: this.strokeWidth * scale,
-                color: text.visible ? this.activeColor : this.normalColor,
-            });
-
             const bounds = internalModel.getDrawableBounds(
                 internalModel.hitAreas[text.text]!.index,
                 tempBounds,
@@ -78,7 +90,10 @@ export class HitAreaFrames extends Graphics {
             bounds.width = bounds.width * transform.a;
             bounds.height = bounds.height * transform.d;
 
-            this.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            this.graphics.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({
+                width: this.strokeWidth * scale,
+                color: text.visible ? this.activeColor : this.normalColor,
+            });
 
             text.x = bounds.x + this.strokeWidth * scale;
             text.y = bounds.y + this.strokeWidth * scale;

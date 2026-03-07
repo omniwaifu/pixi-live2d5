@@ -1,9 +1,18 @@
-import { CSM_LOG_LEVEL_VERBOSE } from "@cubism/cubismframeworkconfig";
+import { CSM_LOG_LEVEL_WARNING } from "@cubism/cubismframeworkconfig";
 
 const LOG_LEVEL_VERBOSE = 0;
 const LOG_LEVEL_WARNING = 1;
 const LOG_LEVEL_ERROR = 2;
 const LOG_LEVEL_NONE = 999;
+const DEFAULT_VERSION = "dev";
+const globalFlags = globalThis as typeof globalThis & {
+    __DEV__?: boolean;
+    __VERSION__?: string;
+};
+
+const isDev = typeof globalFlags.__DEV__ === "boolean" ? globalFlags.__DEV__ : false;
+const version =
+    typeof globalFlags.__VERSION__ === "string" ? globalFlags.__VERSION__ : DEFAULT_VERSION;
 
 /**
  * Global configs.
@@ -18,7 +27,7 @@ export const config = {
      * Global log level.
      * @default config.LOG_LEVEL_WARNING
      */
-    logLevel: __DEV__ ? LOG_LEVEL_VERBOSE : LOG_LEVEL_WARNING,
+    logLevel: isDev ? LOG_LEVEL_VERBOSE : LOG_LEVEL_WARNING,
 
     /**
      * Enabling sound for motions.
@@ -50,10 +59,10 @@ export const config = {
      */
     preserveExpressionOnMotion: true,
 
-    cubism5: { logLevel: CSM_LOG_LEVEL_VERBOSE },
+    cubism5: { logLevel: CSM_LOG_LEVEL_WARNING },
 };
 
 /**
  * Consistent with the `version` in package.json.
  */
-export const VERSION = __VERSION__;
+export const VERSION = version;

@@ -1,92 +1,85 @@
 {
-  "name": "pixi-live2d-display",
-  "version": "v0.5.0-beta",
-  "description": "Live2D plugin for PixiJS",
-  "main": "dist/index.js",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./types/index.d.ts",
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.js"
+    "name": "pixi-live2d-display",
+    "version": "v0.5.0-beta",
+    "description": "Live2D plugin for PixiJS",
+    "main": "dist/index.js",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./types/index.d.ts",
+            "import": "./dist/index.es.js",
+            "require": "./dist/index.js"
+        },
+        "./cubism5": {
+            "types": "./types/index.d.ts",
+            "import": "./dist/cubism5.es.js",
+            "require": "./dist/cubism5.js"
+        },
+        "./extra": {
+            "types": "./types/extra.d.ts",
+            "import": "./dist/extra.es.js",
+            "require": "./dist/extra.js"
+        }
     },
-    "./cubism2": {
-      "types": "./types/index.d.ts",
-      "import": "./dist/cubism2.es.js",
-      "require": "./dist/cubism2.js"
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/omniwaifu/pixi-live2d5.git"
     },
-    "./cubism5": {
-      "types": "./types/index.d.ts",
-      "import": "./dist/cubism5.es.js",
-      "require": "./dist/cubism5.js"
+    "author": "guansss <821143943@qq.com>",
+    "license": "MIT",
+    "scripts": {
+        "setup": "node scripts/setup.js",
+        "playground": "vite",
+        "prepare": "npm run type && npm run build",
+        "test": "npm run type && npm run build && npm run test:node && npm run test:browser",
+        "test:browser": "vitest run",
+        "test:node": "vitest run --config vitest.node.config.ts",
+        "test:u": "vitest --update",
+        "build": "rimraf dist && node scripts/build.js",
+        "pretype": "node scripts/patch-dts-generator.js",
+        "type": "rimraf types && dts-bundle-generator src/index.ts --no-check --project=tsconfig.build.json -o=types/index.d.ts && dts-bundle-generator src/extra.ts --no-check --project=tsconfig.build.json -o=types/extra.d.ts ",
+        "posttype": "node scripts/patch-types.js",
+        "doc": "node scripts/gen-docs.js",
+        "serve-docs": "mkdocs serve -f docs/mkdocs.yml",
+        "deploy": "gh-pages -d site",
+        "prepublishOnly": "npm run lint && npm test",
+        "lint": "eslint . --config .eslintrc.cjs --rule \"prettier/prettier: error\"",
+        "lint:fix": "npm run lint -- --fix"
     },
-    "./cubism4": {
-      "types": "./types/index.d.ts",
-      "import": "./dist/cubism5.es.js",
-      "require": "./dist/cubism5.js"
+    "files": [
+        "dist",
+        "types"
+    ],
+    "types": "types/index.d.ts",
+    "peerDependencies": {
+        "pixi.js": "^8.0.0"
     },
-    "./extra": {
-      "types": "./types/extra.d.ts",
-      "import": "./dist/extra.es.js",
-      "require": "./dist/extra.js"
+    "devDependencies": {
+        "@types/lodash-es": "^4.17.6",
+        "@types/node": "^20.8.9",
+        "@typescript-eslint/eslint-plugin": "^6.7.4",
+        "@typescript-eslint/parser": "^6.7.4",
+        "@vitest/browser": "^1.0.0-beta.5",
+        "birpc": "^0.2.14",
+        "dts-bundle-generator": "^6.11.0",
+        "eslint": "^8.51.0",
+        "eslint-config-prettier": "^9.0.0",
+        "eslint-plugin-prettier": "^5.0.0",
+        "gh-pages": "^6.1.0",
+        "glob": "^8.0.3",
+        "handlebars": "^4.7.7",
+        "jest-image-snapshot": "^6.2.0",
+        "jszip": "^3.10.0",
+        "lodash-es": "^4.17.21",
+        "pixi.js": "^8.14.3",
+        "prettier": "^3.0.3",
+        "rimraf": "^3.0.2",
+        "terser": "^5.43.1",
+        "type-fest": "^4.4.0",
+        "typescript": "^5.2.2",
+        "vite": "^5.0.0",
+        "vite-plugin-node-polyfills": "^0.17.0",
+        "vitest": "^1.0.1",
+        "webdriverio": "^8.17.0"
     }
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/omniwaifu/pixi-live2d5.git"
-  },
-  "author": "guansss <821143943@qq.com>",
-  "license": "MIT",
-  "scripts": {
-    "setup": "node scripts/setup.js",
-    "playground": "vite",
-    "test": "vitest",
-    "test:u": "vitest --update",
-    "build": "rimraf dist && node scripts/build.js",
-    "pretype": "node scripts/patch-dts-generator.js",
-    "type": "rimraf types && dts-bundle-generator src/index.ts --no-check --project=tsconfig.build.json -o=types/index.d.ts && dts-bundle-generator src/extra.ts --no-check --project=tsconfig.build.json -o=types/extra.d.ts ",
-    "posttype": "node scripts/patch-types.js",
-    "doc": "node scripts/gen-docs.js",
-    "serve-docs": "mkdocs serve -f docs/mkdocs.yml",
-    "deploy": "gh-pages -d site",
-    "prepublishOnly": "npm run type && npm run build && npm run test",
-    "lint": "eslint . --config .eslintrc.cjs --rule \"prettier/prettier: error\"",
-    "lint:fix": "npm run lint -- --fix"
-  },
-  "files": [
-    "dist",
-    "types"
-  ],
-  "types": "types/index.d.ts",
-  "peerDependencies": {
-    "pixi.js": "^8.0.0"
-  },
-  "devDependencies": {
-    "@types/lodash-es": "^4.17.6",
-    "@types/node": "^20.8.9",
-    "@typescript-eslint/eslint-plugin": "^6.7.4",
-    "@typescript-eslint/parser": "^6.7.4",
-    "@vitest/browser": "^1.0.0-beta.5",
-    "birpc": "^0.2.14",
-    "dts-bundle-generator": "^6.11.0",
-    "eslint": "^8.51.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "gh-pages": "^6.1.0",
-    "glob": "^8.0.3",
-    "handlebars": "^4.7.7",
-    "jest-image-snapshot": "^6.2.0",
-    "jszip": "^3.10.0",
-    "lodash-es": "^4.17.21",
-    "pixi.js": "^8.14.3",
-    "prettier": "^3.0.3",
-    "rimraf": "^3.0.2",
-    "terser": "^5.43.1",
-    "type-fest": "^4.4.0",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.0",
-    "vite-plugin-node-polyfills": "^0.17.0",
-    "vitest": "^1.0.1",
-    "webdriverio": "^8.17.0"
-  }
 }

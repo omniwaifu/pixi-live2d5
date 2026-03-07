@@ -1,4 +1,4 @@
-import { Assets, Texture } from "pixi.js";
+import { Assets, type Texture } from "pixi.js";
 
 let configuredCrossOrigin: string | undefined;
 

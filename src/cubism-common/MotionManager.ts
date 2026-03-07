@@ -16,7 +16,7 @@ export interface MotionManagerOptions {
 
     /**
      * Specifies the idle motion group.
-     * @default "idle" in Cubism 2 and "Idle" in Cubism 4.
+     * @default "Idle" for Cubism 5 models.
      */
     idleMotionGroup?: string;
 }
@@ -61,7 +61,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
      * Indicates the content type of the motion files, varies in different Cubism versions.
      * This will be used as `xhr.responseType`.
      */
-    abstract readonly motionDataType: "json" | "arraybuffer";
+    abstract readonly motionDataType: "json" | "arraybuffer" | "text";
 
     /**
      * Can be undefined if the settings defines no expression.
@@ -214,9 +214,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
         index: number,
         priority = MotionPriority.NORMAL,
     ): Promise<boolean> {
-        console.log(`Starting motion: group="${group}", index=${index}, priority=${priority}`);
         if (!this.state.reserve(group, index, priority)) {
-            console.log("Motion reservation failed");
             return false;
         }
 
@@ -351,7 +349,6 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
             this.state.complete();
 
             if (this.state.shouldRequestIdleMotion()) {
-                console.log("Starting random idle motion for group:", this.groups.idle);
                 // noinspection JSIgnoredPromiseFromCall
                 this.startRandomMotion(this.groups.idle, MotionPriority.IDLE);
             }
@@ -389,7 +386,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
      * @return The created Motion.
      */
     abstract createMotion(
-        data: ArrayBuffer | JSONObject,
+        data: ArrayBuffer | JSONObject | string,
         group: string,
         definition: MotionSpec,
     ): Motion;

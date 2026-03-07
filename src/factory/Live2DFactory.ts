@@ -20,7 +20,7 @@ import { ZipLoader } from "./ZipLoader";
 export interface Live2DFactoryOptions extends Live2DModelOptions {
     /**
      * Whether to check the consistency of the moc file. It's an internal
-     * function of Cubism core and only available since Cubism 4 R7.
+     * function of Cubism core and available in the Cubism 5 runtime used by this fork.
      * @default false
      */
     checkMocConsistency?: boolean;
@@ -73,6 +73,12 @@ export interface Live2DRuntime {
 
     // TODO: remove
     ready(): Promise<void>;
+
+    /**
+     * Indicates how expression files should be loaded.
+     * @default "json"
+     */
+    expressionDataType?: "json" | "text";
 
     /**
      * Checks if the data is a valid moc to create the core model.
@@ -341,9 +347,8 @@ export class Live2DFactory {
 
             const path = expressionManager.getExpressionFile(definition);
 
-            // Detect if this is Cubism 5 and load as text instead of json
             const runtime = Live2DFactory.findRuntime(expressionManager.settings);
-            const loadType = runtime?.constructor.name === "Cubism5Runtime" ? "text" : "json";
+            const loadType = runtime?.expressionDataType ?? "json";
 
             tasks[index] ??= Live2DLoader.load({
                 url: path,

@@ -3,30 +3,29 @@ import type { MotionManagerOptions } from "@/cubism-common/MotionManager";
 import { MotionManager } from "@/cubism-common/MotionManager";
 import { Cubism5ExpressionManager } from "@/cubism5/Cubism5ExpressionManager";
 import type { Cubism5ModelSettings } from "@/cubism5/Cubism5ModelSettings";
-import type { CubismSpec } from "@cubism/CubismSpec";
-import type { CubismModel } from "@cubism/model/cubismmodel";
-import type { ACubismMotion } from "@cubism/motion/acubismmotion";
 import { CubismMotion } from "@cubism/motion/cubismmotion";
 import { CubismMotionJson } from "@cubism/motion/cubismmotionjson";
 import { CubismMotionQueueManager } from "@cubism/motion/cubismmotionqueuemanager";
 import { csmVector } from "@cubism/type/csmvector";
+import { toCubismJsonBuffer } from "./serialization";
+import type { Cubism5MotionDefinition } from "./types";
 import type { Mutable } from "../types/helpers";
 
-export class Cubism5MotionManager extends MotionManager<CubismMotion, CubismSpec.Motion> {
-    readonly definitions: Partial<Record<string, CubismSpec.Motion[]>>;
+export class Cubism5MotionManager extends MotionManager<any, Cubism5MotionDefinition> {
+    readonly definitions: Partial<Record<string, Cubism5MotionDefinition[]>>;
 
     readonly groups = { idle: "Idle" } as const;
 
     readonly motionDataType = "text";
 
-    readonly queueManager = new CubismMotionQueueManager();
+    readonly queueManager: any = new CubismMotionQueueManager();
 
     declare readonly settings: Cubism5ModelSettings;
 
     expressionManager?: Cubism5ExpressionManager;
 
-    eyeBlinkIds: string[];
-    lipSyncIds: string[];
+    eyeBlinkIds: any[];
+    lipSyncIds: any[];
 
     constructor(settings: Cubism5ModelSettings, options?: MotionManagerOptions) {
         super(settings, options);
@@ -34,12 +33,6 @@ export class Cubism5MotionManager extends MotionManager<CubismMotion, CubismSpec
         this.definitions = settings.motions ?? {};
         this.eyeBlinkIds = settings.getEyeBlinkParameters() || [];
         this.lipSyncIds = settings.getLipSyncParameters() || [];
-
-        console.log("=== MOTION MANAGER INIT ===");
-        console.log("Motion definitions:", this.definitions);
-        console.log("Groups:", this.groups);
-        console.log("Has idle group?", !!this.groups.idle);
-        console.log("Idle motions:", this.definitions[this.groups.idle]);
 
         this.init(options);
     }
@@ -60,11 +53,8 @@ export class Cubism5MotionManager extends MotionManager<CubismMotion, CubismSpec
         return this.queueManager.isFinished();
     }
 
-    protected _startMotion(
-        motion: CubismMotion,
-        onFinish?: (motion: CubismMotion) => void,
-    ): number {
-        motion.setFinishedMotionHandler(onFinish as (motion: ACubismMotion) => void);
+    protected _startMotion(motion: any, onFinish?: (motion: any) => void): number {
+        motion.setFinishedMotionHandler(onFinish as ((motion: unknown) => void) | undefined);
 
         this.queueManager.stopAllMotions();
 
@@ -75,22 +65,8 @@ export class Cubism5MotionManager extends MotionManager<CubismMotion, CubismSpec
         this.queueManager.stopAllMotions();
     }
 
-    createMotion(data: object | string, group: string, definition: CubismSpec.Motion): CubismMotion {
-        // Handle text data for Cubism 5 - convert to ArrayBuffer
-        let arrayBuffer: ArrayBuffer;
-        let byteLength: number;
-        
-        if (typeof data === "string") {
-            const buffer = new TextEncoder().encode(data);
-            arrayBuffer = buffer.buffer;
-            byteLength = buffer.byteLength;
-        } else {
-            const jsonString = JSON.stringify(data);
-            const buffer = new TextEncoder().encode(jsonString);
-            arrayBuffer = buffer.buffer;
-            byteLength = buffer.byteLength;
-        }
-        
+    createMotion(data: object | string, group: string, definition: Cubism5MotionDefinition): any {
+        const { buffer: arrayBuffer, byteLength } = toCubismJsonBuffer(data);
         const motion = CubismMotion.create(arrayBuffer, byteLength);
         const json = new CubismMotionJson(arrayBuffer, byteLength);
 
@@ -116,26 +92,26 @@ export class Cubism5MotionManager extends MotionManager<CubismMotion, CubismSpec
 
         // Initialize with empty vectors to prevent null reference errors
         // The motion JSON already contains all necessary parameter information
-        const emptyEyeBlinkVector = new csmVector();
-        const emptyLipSyncVector = new csmVector();
+        const emptyEyeBlinkVector = new csmVector<any>();
+        const emptyLipSyncVector = new csmVector<any>();
         motion.setEffectIds(emptyEyeBlinkVector, emptyLipSyncVector);
 
         return motion;
     }
 
-    getMotionFile(definition: CubismSpec.Motion): string {
+    getMotionFile(definition: Cubism5MotionDefinition): string {
         return definition.File;
     }
 
-    protected getMotionName(definition: CubismSpec.Motion): string {
+    protected getMotionName(definition: Cubism5MotionDefinition): string {
         return definition.File;
     }
 
-    protected getSoundFile(definition: CubismSpec.Motion): string | undefined {
+    protected getSoundFile(definition: Cubism5MotionDefinition): string | undefined {
         return definition.Sound;
     }
 
-    protected updateParameters(model: CubismModel, now: DOMHighResTimeStamp): boolean {
+    protected updateParameters(model: object, now: DOMHighResTimeStamp): boolean {
         return this.queueManager.doUpdateMotion(model, now);
     }
 

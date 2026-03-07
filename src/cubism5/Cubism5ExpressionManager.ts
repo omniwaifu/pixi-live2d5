@@ -1,18 +1,15 @@
 import type { MotionManagerOptions } from "@/cubism-common";
 import { ExpressionManager } from "@/cubism-common/ExpressionManager";
 import type { Cubism5ModelSettings } from "@/cubism5/Cubism5ModelSettings";
-import type { CubismSpec } from "@cubism/CubismSpec";
-import type { CubismModel } from "@cubism/model/cubismmodel";
 import { CubismExpressionMotion } from "@cubism/motion/cubismexpressionmotion";
 import { CubismMotionQueueManager } from "@cubism/motion/cubismmotionqueuemanager";
+import { toCubismJsonBuffer } from "./serialization";
+import type { Cubism5ExpressionDefinition } from "./types";
 
-export class Cubism5ExpressionManager extends ExpressionManager<
-    CubismExpressionMotion,
-    CubismSpec.Expression
-> {
-    readonly queueManager = new CubismMotionQueueManager();
+export class Cubism5ExpressionManager extends ExpressionManager<any, Cubism5ExpressionDefinition> {
+    readonly queueManager: any = new CubismMotionQueueManager();
 
-    readonly definitions: CubismSpec.Expression[];
+    readonly definitions: Cubism5ExpressionDefinition[];
 
     constructor(settings: Cubism5ModelSettings, options?: MotionManagerOptions) {
         super(settings, options);
@@ -30,24 +27,17 @@ export class Cubism5ExpressionManager extends ExpressionManager<
         return this.definitions.findIndex((def) => def.Name === name);
     }
 
-    getExpressionFile(definition: CubismSpec.Expression): string {
+    getExpressionFile(definition: Cubism5ExpressionDefinition): string {
         return definition.File;
     }
 
-    createExpression(data: object | string, definition: CubismSpec.Expression | undefined) {
-        // Handle text data for Cubism 5 - convert to ArrayBuffer
-        if (typeof data === "string") {
-            const buffer = new TextEncoder().encode(data);
-            return CubismExpressionMotion.create(buffer.buffer, buffer.byteLength);
-        }
-        
-        // Handle object data (fallback for other cases)
-        const jsonString = JSON.stringify(data);
-        const buffer = new TextEncoder().encode(jsonString);
-        return CubismExpressionMotion.create(buffer.buffer, buffer.byteLength);
+    createExpression(data: object | string, definition: Cubism5ExpressionDefinition | undefined) {
+        const { buffer, byteLength } = toCubismJsonBuffer(data);
+
+        return CubismExpressionMotion.create(buffer, byteLength);
     }
 
-    protected _setExpression(motion: CubismExpressionMotion): number {
+    protected _setExpression(motion: any): number {
         return this.queueManager.startMotion(motion, false, performance.now());
     }
 
@@ -55,7 +45,7 @@ export class Cubism5ExpressionManager extends ExpressionManager<
         this.queueManager.stopAllMotions();
     }
 
-    protected updateParameters(model: CubismModel, now: DOMHighResTimeStamp): boolean {
+    protected updateParameters(model: object, now: DOMHighResTimeStamp): boolean {
         return this.queueManager.doUpdateMotion(model, now);
     }
 }

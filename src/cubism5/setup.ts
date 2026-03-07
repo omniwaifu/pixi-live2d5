@@ -1,6 +1,7 @@
+import { config } from "@/config";
 import { logger } from "@/utils";
-import type { CubismStartupOption } from "@cubism/live2dcubismframework";
 import { CubismFramework, LogLevel } from "@cubism/live2dcubismframework";
+import type { Cubism5StartupOptions } from "./types";
 
 let startupPromise: Promise<void>;
 let startupRetries = 20;
@@ -46,15 +47,15 @@ export function cubism5Ready(): Promise<void> {
 /**
  * Starts up Cubism 5 framework.
  */
-export function startUpCubism5(options?: CubismStartupOption) {
+export function startUpCubism5(options?: Cubism5StartupOptions) {
     options = Object.assign(
         {
             logFunction: console.log,
-            loggingLevel: LogLevel.LogLevel_Verbose,
+            loggingLevel: config.cubism5.logLevel ?? LogLevel.LogLevel_Warning,
         },
         options,
     );
 
-    CubismFramework.startUp(options);
+    CubismFramework.startUp(options as any);
     CubismFramework.initialize();
 }
