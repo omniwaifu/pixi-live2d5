@@ -7,7 +7,7 @@ import type { JSONObject, Mutable } from "../types/helpers";
 
 /**
  * Abstract expression manager.
- * @emits {@link ExpressionManagerEvents}
+ * Emits the expression manager event set.
  */
 export abstract class ExpressionManager<
     Expression = any,
@@ -77,8 +77,7 @@ export abstract class ExpressionManager<
      * but be emitted with an "expressionLoadError" event.
      * @param index - Index of the expression in definitions.
      * @return Promise that resolves with the Expression, or with undefined if it can't be loaded.
-     * @emits {@link ExpressionManagerEvents.expressionLoaded}
-     * @emits {@link ExpressionManagerEvents.expressionLoadError}
+     * Emits `expressionLoaded` on success and `expressionLoadError` when loading fails.
      */
     protected async loadExpression(index: number): Promise<Expression | undefined> {
         if (!this.definitions[index]) {
@@ -202,7 +201,7 @@ export abstract class ExpressionManager<
 
     /**
      * Destroys the instance.
-     * @emits {@link ExpressionManagerEvents.destroy}
+     * Emits `destroy`.
      */
     destroy() {
         this.destroyed = true;

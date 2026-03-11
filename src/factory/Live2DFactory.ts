@@ -153,6 +153,8 @@ export class Live2DFactory {
 
     /**
      * Middlewares to run through when setting up a Live2DModel.
+     * @internal
+     * @ignore
      */
     static live2DModelMiddlewares: Middleware<Live2DFactoryContext>[] = [
         ZipLoader.factory,

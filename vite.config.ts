@@ -17,13 +17,13 @@ if (!existsSync(cubismSubmodule) || !existsSync(path.resolve(cubismSubmodule, "p
     );
 }
 
-if (!existsSync(cubismCore)) {
-    throw new Error("Cubism Core not found. Please run `npm run setup` to download them.");
-}
-
 export default defineConfig(({ command, mode }) => {
     const isDev = command === "serve";
     const isTest = mode === "test";
+
+    if ((isDev || isTest) && !existsSync(cubismCore)) {
+        throw new Error("Cubism Core not found. Please run `bun run setup` to download it.");
+    }
 
     return {
         define: {

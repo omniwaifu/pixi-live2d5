@@ -4,21 +4,23 @@ docs_dir: docs
 
 site_dir: ../site
 
-repo_url: https://github.com/guansss/pixi-live2d-display
+repo_url: https://github.com/omniwaifu/pixi-live2d5
 
 nav:
-  - Introduction: .
+  - Introduction: 'index.md'
   - References:
     - Models: 'models.md'
     - Interactions: 'interactions.md'
     - Motions and Expressions: 'motions_expressions.md'
     - Additional Features: 'additional.md'
     - Configs: 'configs.md'
-  - API Documentation: 'api/index.html'
+    - Graphs: 'graphs.md'
+  - API Documentation: 'api_index.md'
 
 plugins:
   - search
   - mermaid2:
+      version: 10.4.0
       arguments:
         theme: dark
 
@@ -44,10 +46,5 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_div_format
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
-
-extra_javascript:
-  - https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js
-
-google_analytics: ['G-KH8XQ1VPZW', 'guansss.github.io']
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

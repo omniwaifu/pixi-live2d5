@@ -90,7 +90,8 @@ URL is required in all cases, because resource loaders rely on the model's URL t
 
 ### Options
 
-`options` is a combination of the options for multiple components, see [Live2DFactoryOptions](https://guansss.github.io/pixi-live2d-display/interfaces/index.live2dfactoryoptions.html).
+`options` is a combination of the options for multiple components. For field-level details, see the generated
+`Live2DFactoryOptions` API page in this fork's local API documentation.
 
 ## Creating model synchronously
 

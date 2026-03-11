@@ -1,32 +1,32 @@
-const TypeDoc = require("typedoc");
-const { execSync } = require("child_process");
+import { spawnSync } from "node:child_process";
 
-mkdocs().then(typedoc);
+main();
 
-async function mkdocs() {
-    execSync(`mkdocs build -f docs/mkdocs.yml`, { stdio: "inherit" });
-}
-
-// https://typedoc.org/guides/installation/#node-module
-async function typedoc() {
-    const app = new TypeDoc.Application();
-
-    // If you want TypeDoc to load tsconfig.json
-    app.options.addReader(new TypeDoc.TSConfigReader());
-
-    app.bootstrap({
-        entryPoints: ["src/index.ts", "cubism/src/index.ts"],
-        readme: "DOC_INDEX.md",
-        tsconfig: "tsconfig.build.json",
-        includeVersion: true,
-        excludePrivate: true,
+function run(command, args) {
+    const result = spawnSync(command, args, {
+        stdio: "inherit",
+        shell: process.platform === "win32",
     });
 
-    const project = app.convert();
-
-    if (!project) {
-        throw new Error("Project is not converted correctly");
+    if (result.status !== 0) {
+        throw new Error(`Command failed: ${command} ${args.join(" ")}`);
     }
+}
 
-    await app.generateDocs(project, "site/api");
+function main() {
+    run("mkdocs", ["build", "-f", "docs/mkdocs.yml"]);
+    run("typedoc", [
+        "src/index.ts",
+        "--readme",
+        "docs/docs/api_index.md",
+        "--tsconfig",
+        "tsconfig.docs.json",
+        "--includeVersion",
+        "--excludePrivate",
+        "--excludeExternals",
+        "--excludeReferences",
+        "--excludeNotDocumented",
+        "--out",
+        "site/api",
+    ]);
 }

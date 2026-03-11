@@ -17,11 +17,15 @@ jobs:
               with:
                   submodules: recursive
 
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: 1.3.5
+
             - uses: actions/setup-node@v6
               with:
                   node-version: 24
                   registry-url: "https://registry.npmjs.org"
-                  cache: "npm"
+                  cache: "bun"
 
             - name: Restore Cubism core cache
               uses: actions/cache@v5
@@ -32,11 +36,11 @@ jobs:
                       core/live2dcubismcore.d.ts
                   key: cubism-core-${{ runner.os }}-${{ hashFiles('scripts/setup.js') }}
 
-            - run: npm ci
+            - run: bun install --frozen-lockfile
 
             - name: Download Cubism 5 core
               if: steps.cache-core.outputs.cache-hit != 'true'
-              run: npm run setup
+              run: bun run setup
 
             - name: Ensure Xvfb is available
               run: |
@@ -45,9 +49,9 @@ jobs:
                     sudo apt-get install -y xvfb
                   fi
 
-            - run: npm run lint
-            - run: xvfb-run -a npm test
-            - run: npm pack --dry-run
+            - run: bun run lint
+            - run: xvfb-run -a bun run test
+            - run: bun pm pack --dry-run
 
             # parse the package version to determine the npm tag to use (most likely "beta").
             # Example:

@@ -37,7 +37,7 @@ export enum MotionPreloadStrategy {
 
 /**
  * Handles the motion playback.
- * @emits {@link MotionManagerEvents}
+ * Emits the motion manager event set.
  */
 export abstract class MotionManager<Motion = any, MotionSpec = any> extends EventEmitter {
     /**
@@ -162,8 +162,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
      * @param group - The motion group.
      * @param index - Index in the motion group.
      * @return Promise that resolves with the Motion, or with undefined if it can't be loaded.
-     * @emits {@link MotionManagerEvents.motionLoaded}
-     * @emits {@link MotionManagerEvents.motionLoadError}
+     * Emits `motionLoaded` on success and `motionLoadError` when loading fails.
      */
     async loadMotion(group: string, index: number): Promise<Motion | undefined> {
         if (!this.definitions[group]?.[index]) {
@@ -359,7 +358,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
 
     /**
      * Destroys the instance.
-     * @emits {@link MotionManagerEvents.destroy}
+     * Emits `destroy`.
      */
     destroy() {
         this.destroyed = true;

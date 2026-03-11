@@ -31,7 +31,7 @@ export type Live2DConstructor = { new (options?: Live2DModelOptions): Live2DMode
  * const model = await Live2DModel.from('shizuku.model3.json');
  * container.add(model);
  * ```
- * @emits {@link Live2DModelEvents}
+ * Emits the Live2D model event set.
  */
 export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewContainer {
     /** @internal */
@@ -53,7 +53,17 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
     ): Promise<InstanceType<M>> {
         const model = new this(options) as InstanceType<M>;
 
-        return Live2DFactory.setupLive2DModel(model, source, options).then(() => model);
+        return Live2DFactory.setupLive2DModel(model, source, options)
+            .then(() => {
+                options?.onLoad?.();
+
+                return model;
+            })
+            .catch((error) => {
+                options?.onError?.(error as Error);
+
+                throw error;
+            });
     }
 
     /**
@@ -92,7 +102,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
 
     /**
      * Registers the class of `PIXI.Ticker` for auto updating.
-     * @deprecated Use {@link Live2DModelOptions.ticker} instead.
+     * @deprecated Use the `ticker` creation option instead.
      */
     static registerTicker(tickerClass: typeof Ticker): void {
         Automator["defaultTicker"] = tickerClass.shared;
@@ -161,7 +171,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
     }
 
     /**
-     * A callback that observes {@link anchor}, invoked when the anchor's values have been changed.
+     * A callback that observes `anchor`, invoked when the anchor values change.
      */
     protected onAnchorChange(): void {
         if (!this.internalModel) {
@@ -228,7 +238,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
      * if at least one of the hit areas is hit.
      * @param x - Position in world space.
      * @param y - Position in world space.
-     * @emits {@link Live2DModelEvents.hit}
+     * Emits `hit` when at least one hit area matches.
      */
     tap(x: number, y: number): void {
         const hitAreaNames = this.hitTest(x, y);
@@ -420,7 +430,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
         }
 
         this.automator.destroy();
-        this.internalModel.destroy();
+        this.internalModel?.destroy();
 
         super.destroy(options as DestroyOptions);
     }

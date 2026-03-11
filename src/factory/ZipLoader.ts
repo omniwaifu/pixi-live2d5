@@ -69,7 +69,7 @@ export class ZipLoader {
 
             // a fake URL, the only requirement is it should be unique,
             // as FileLoader will use it as the ID of all uploaded files
-            settings._objectURL = ZipLoader.ZIP_PROTOCOL + ZipLoader.uid + "/" + settings.url;
+            settings._objectURL = ZipLoader.ZIP_PROTOCOL + ZipLoader.uid++ + "/" + settings.url;
 
             const files = await ZipLoader.unzip(reader, settings);
 

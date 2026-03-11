@@ -60,6 +60,8 @@ export class FileLoader {
 
     /**
      * Middleware for Live2DFactory.
+     * @internal
+     * @ignore
      */
     static factory: Middleware<Live2DFactoryContext> = async (context, next) => {
         if (Array.isArray(context.source) && context.source[0] instanceof File) {

@@ -1,17 +1,41 @@
 import { Assets, type Texture } from "pixi.js";
 
-let configuredCrossOrigin: string | undefined;
+let textureLoadQueue = Promise.resolve();
 
 export function createTexture(
     url: string,
     options: { crossOrigin?: string } = {},
 ): Promise<Texture> {
-    // PixiJS v8 uses the Assets system for loading.
-    // Note: crossOrigin is a global preference in Pixi v8; we set it only when explicitly provided.
-    if (options.crossOrigin !== undefined && options.crossOrigin !== configuredCrossOrigin) {
-        Assets.setPreferences({ crossOrigin: options.crossOrigin } as any);
-        configuredCrossOrigin = options.crossOrigin;
-    }
+    const loadTexture = async () => {
+        const parsersWithCrossOrigin = ((Assets.loader as any)?.parsers ?? []).filter(
+            (parser: any) => parser?.config && "crossOrigin" in parser.config,
+        );
+        const previousCrossOrigins = parsersWithCrossOrigin.map((parser: any) => ({
+            parser,
+            crossOrigin: parser.config.crossOrigin,
+        }));
 
-    return Assets.load(url);
+        if (options.crossOrigin !== undefined) {
+            Assets.setPreferences({ crossOrigin: options.crossOrigin } as any);
+        }
+
+        try {
+            return await Assets.load(url);
+        } finally {
+            previousCrossOrigins.forEach(({ parser, crossOrigin }) => {
+                parser.config.crossOrigin = crossOrigin;
+            });
+        }
+    };
+
+    // PixiJS v8 exposes crossOrigin as a global parser preference. Queue texture loads so
+    // per-model overrides do not leak into unrelated asset loads in the host app.
+    const queuedLoad = textureLoadQueue.then(loadTexture, loadTexture);
+
+    textureLoadQueue = queuedLoad.then(
+        () => undefined,
+        () => undefined,
+    );
+
+    return queuedLoad;
 }

@@ -1,4 +1,4 @@
-const assert = require("assert");
+import assert from "node:assert/strict";
 
 const STATE_TRANSITION_TABLE = `
                         NONE    IDLE    NORMAL  FORCE
@@ -83,15 +83,13 @@ assert(
             isMotion(row.playing) &&
             isMotion(row.reserved) &&
             isPriority(row.playingPriority) &&
-            isPriority(row.playingPriority),
+            isPriority(row.reservedPriority),
     ),
 );
 assert(results.every((item) => isMotion(item)));
 
-module.exports = {
-    STT: {
-        inputPriorities,
-        currentStates,
-        results,
-    },
+export const STT = {
+    inputPriorities,
+    currentStates,
+    results,
 };

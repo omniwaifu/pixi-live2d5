@@ -3,7 +3,8 @@ sometimes.
 
 ## HitAreaFrames
 
-Displays frames for model's hit areas. You can see this in the [interaction demo](https://codepen.io/guansss/pen/KKgXBOP/left?editors=0010).
+Displays frames for model's hit areas. An external demo of the original project is still available in the
+[interaction demo](https://codepen.io/guansss/pen/KKgXBOP/left?editors=0010).
 
 `HitAreaFrames` must be used as a direct child of `Live2DModel`.
 
@@ -119,7 +120,9 @@ ZipLoader.releaseReader(reader: ZipReader): void
 ```
 
 !!! info
-An implementation example using [jszip](https://github.com/Stuk/jszip) can be found in the [live2d-viewer-web](https://github.com/guansss/live2d-viewer-web/blob/main/src/app/zip.ts) project.
+An external implementation example using [jszip](https://github.com/Stuk/jszip) can be found in the
+[live2d-viewer-web](https://github.com/guansss/live2d-viewer-web/blob/main/src/app/zip.ts) project maintained by the
+original author.
 
 Then, you can create model from a zip file using its URL.
 

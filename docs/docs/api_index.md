@@ -1,14 +1,15 @@
 ## Quick Start
 
-Here are some pages that you're most likely to look for:
+These API docs are generated from the fork's supported public surface. The main module is `index`, which
+re-exports the Cubism 5 integration used by this repository.
 
-- [Live2DModel](classes/index.Live2DModel.html)
-- [InternalModel](classes/index.InternalModel.html)
-- [ModelSettings](classes/index.ModelSettings.html)
-- [MotionManager](classes/index.MotionManager.html)
-- [ExpressionManager](classes/index.ExpressionManager.html)
-- [config](modules/index.config.html)
+The most useful entry points to look for in the generated API are:
 
-There are two modules in this doc - [index](modules/index.html) and [CubismWebFramework](modules/CubismWebFramework.html), where `index` is the library's main entry and re-exports everything from `CubismWebFramework`.
+- `Live2DModel`
+- `InternalModel`
+- `ModelSettings`
+- `MotionManager`
+- `ExpressionManager`
+- `config`
 
 You can check `Externals` in Settings at top right ↗ to see class members which are inherited from Pixi's classes.

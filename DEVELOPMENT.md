@@ -21,7 +21,7 @@ Then follow one of the following methods to manually install the submodule:
 **Method 1**
 
 ```sh
-git config --global url."https://github.com/guansss/CubismWebFramework.git".insteadOf "git@github.com:guansss/CubismWebFramework.git"
+git config --global url."https://github.com/Live2D/CubismWebFramework.git".insteadOf "git@github.com:Live2D/CubismWebFramework.git"
 
 git submodule sync
 git submodule update --init
@@ -29,7 +29,7 @@ git submodule update --init
 
 **Method 2**
 
-Edit `.gitmodules` and replace `git@github.com:guansss/CubismWebFramework.git` with `https://github.com/guansss/CubismWebFramework.git` (don't commit this change if you are contributing to this project!).
+Edit `.gitmodules` and replace `git@github.com:Live2D/CubismWebFramework.git` with `https://github.com/Live2D/CubismWebFramework.git` (don't commit this change if you are contributing to this project!).
 
 Then run:
 
@@ -43,13 +43,13 @@ git submodule update --init
 Install dependencies:
 
 ```sh
-npm install
+bun install
 ```
 
 Download the Cubism 5 core files into `./core`:
 
 ```sh
-npm run setup
+bun run setup
 ```
 
 ## Testing
@@ -57,7 +57,7 @@ npm run setup
 The main validation flow is:
 
 ```sh
-npm run test
+bun run test
 ```
 
 This now generates types, builds the bundles, runs the node tests, and runs the browser smoke tests in one command.
@@ -65,11 +65,11 @@ This now generates types, builds the bundles, runs the node tests, and runs the 
 If you only want to run a subset while iterating:
 
 ```sh
-npm run lint
-npm run type
-npm run build
-npm run test:node
-npm run test:browser
+bun run lint
+bun run type
+bun run build
+bun run test:node
+bun run test:browser
 ```
 
 ## Playground
@@ -77,7 +77,7 @@ npm run test:browser
 The playground is both a debugging surface and a manual smoke test for the public API. To run it:
 
 ```sh
-npm run playground
+bun run playground
 ```
 
 Changes to `playground/index.ts` should be intentional, because the playground is part of the fork's supported validation path.
@@ -89,6 +89,6 @@ Contributions are welcome! Please open an issue or submit a pull request if you 
 Before contributing, or better yet, before each commit, please run the following command:
 
 ```sh
-npm run lint
-npm run test
+bun run lint
+bun run test
 ```

@@ -43,7 +43,7 @@ const tempBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
 
 /**
  * A wrapper that manages the states of a Live2D core model, and delegates all operations to it.
- * @emits {@link InternalModelEvents}
+ * Emits the internal model event set.
  */
 export abstract class InternalModel extends EventEmitter {
     /**
@@ -262,7 +262,7 @@ export abstract class InternalModel extends EventEmitter {
 
     /**
      * Destroys the model and all related resources.
-     * @emits {@link InternalModelEvents.destroy | destroy}
+     * Emits `destroy`.
      */
     destroy() {
         this.destroyed = true;

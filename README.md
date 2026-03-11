@@ -30,8 +30,8 @@ supported surface down to the production path this repo actually builds, types, 
 
 #### Documentations
 
--   [Documentation](https://guansss.github.io/pixi-live2d-display)
--   [API Documentation](https://guansss.github.io/pixi-live2d-display/api/index.html)
+-   [Documentation](docs/docs/index.md)
+-   [API Documentation](docs/docs/api_index.md)
 -   [Development Notes](DEVELOPMENT.md)
 
 ## Cubism
@@ -52,43 +52,28 @@ not part of this fork.
 
 ## Installation
 
-#### Via GitHub (this fork)
+This repository is maintained as the `omniwaifu/pixi-live2d5` fork of the original `pixi-live2d-display`
+project. The public package name remains `pixi-live2d-display`, but this source repository is best consumed from
+a local checkout because the Cubism framework is stored as a git submodule.
 
-```sh
-npm install github:omniwaifu/pixi-live2d5
-```
-
-Or with specific commit/tag:
-
-```sh
-npm install github:omniwaifu/pixi-live2d5#master
-```
-
-```js
-import { Live2DModel } from "pixi-live2d-display";
-
-// explicit Cubism 5 entrypoint kept for compatibility
-import { Live2DModel } from "pixi-live2d-display/cubism5";
-```
-
-#### Local Development
+#### Local Checkout
 
 ```sh
 git clone https://github.com/omniwaifu/pixi-live2d5.git
 cd pixi-live2d5
-npm install
-npm run setup
-npm run build
+bun install
+bun run setup
+bun run build
 ```
 
-`npm run setup` downloads the Cubism 5 core files used by the playground and browser smoke tests.
+`bun run setup` downloads the Cubism 5 core files used by the playground and browser smoke tests.
 
 Then link it to your project:
 
 ```sh
-npm link
+bun link
 # In your project directory:
-npm link pixi-live2d-display
+bun link pixi-live2d-display
 ```
 
 ## Basic usage
@@ -163,3 +148,5 @@ Live2DModel.registerTicker(Ticker);
 
 The example Live2D model, Mao (Cubism 5), is redistributed under
 Live2D's [Free Material License](https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html).
+
+Original project credit: [guansss/pixi-live2d-display](https://github.com/guansss/pixi-live2d-display)

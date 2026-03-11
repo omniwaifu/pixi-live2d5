@@ -36,6 +36,8 @@ export class XHRLoader {
 
     /**
      * Middleware for Live2DLoader.
+     * @internal
+     * @ignore
      */
     static loader: Middleware<Live2DLoaderContext> = (context, next) => {
         return new Promise<void>((resolve, reject) => {

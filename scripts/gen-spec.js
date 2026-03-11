@@ -1,6 +1,8 @@
-const { inputPriorities, currentStates, results } = require("../test/motion-STT").STT;
-const Handlebars = require("handlebars");
-const fs = require("fs");
+import fs from "node:fs";
+import Handlebars from "handlebars";
+import { STT } from "./motion-stt.js";
+
+const { inputPriorities, currentStates, results } = STT;
 
 Handlebars.registerHelper("default", (a, b) => a || b);
 
