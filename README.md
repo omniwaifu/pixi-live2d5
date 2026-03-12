@@ -1,4 +1,4 @@
-# pixi-live2d-display
+# pixi-live2d5
 
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/omniwaifu/pixi-live2d5?style=flat-square)
 ![Cubism version](https://img.shields.io/badge/Cubism-5-ff69b4?style=flat-square)
@@ -47,14 +47,14 @@ the [Cubism 5 SDK](https://www.live2d.com/download/cubism-sdk/download-web/).
 
 #### Bundle
 
-The package exposes the root entrypoint and `pixi-live2d-display/cubism5`. Legacy `cubism2` / `cubism4` subpaths are
+The package exposes the root entrypoint and `pixi-live2d5/cubism5`. Legacy `cubism2` / `cubism4` subpaths are
 not part of this fork.
 
 ## Installation
 
 This repository is maintained as the `omniwaifu/pixi-live2d5` fork of the original `pixi-live2d-display`
-project. The public package name remains `pixi-live2d-display`, but this source repository is best consumed from
-a local checkout because the Cubism framework is stored as a git submodule.
+project. The published package is now `pixi-live2d5`, which matches the repository name and the maintained scope
+of the fork.
 
 #### Local Checkout
 
@@ -73,14 +73,14 @@ Then link it to your project:
 ```sh
 bun link
 # In your project directory:
-bun link pixi-live2d-display
+bun link pixi-live2d5
 ```
 
 ## Basic usage
 
 ```javascript
 import * as PIXI from "pixi.js";
-import { Live2DModel } from "pixi-live2d-display";
+import { Live2DModel } from "pixi-live2d5";
 
 // expose PIXI to window so that this plugin is able to
 // reference window.PIXI.Ticker to automatically update Live2D models
@@ -125,7 +125,7 @@ When importing Pixi packages on-demand, you may need to manually register the Ti
 ```javascript
 import { Application } from "pixi.js";
 import { Ticker } from "pixi.js";
-import { Live2DModel } from "pixi-live2d-display";
+import { Live2DModel } from "pixi-live2d5";
 
 // register Ticker for Live2DModel
 Live2DModel.registerTicker(Ticker);

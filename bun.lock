@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "pixi-live2d-display",
+      "name": "pixi-live2d5",
       "devDependencies": {
         "@types/lodash-es": "^4.17.6",
         "@types/node": "^20.8.9",

@@ -1,7 +1,7 @@
 Configs are applied to all models.
 
 ```js
-import { config } from "pixi-live2d-display";
+import { config } from "pixi-live2d5";
 
 // log level
 config.logLevel = config.LOG_LEVEL_WARNING; // LOG_LEVEL_VERBOSE, LOG_LEVEL_ERROR, LOG_LEVEL_NONE

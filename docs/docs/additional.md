@@ -19,13 +19,13 @@ This class depends on `@pixi/graphics` and `@pixi/text`, therefore it's excluded
 You can import it from the `extra` bundle.
 
 ```js
-import { HitAreaFrames } from "pixi-live2d-display/extra";
+import { HitAreaFrames } from "pixi-live2d5/extra";
 ```
 
 For using CDNs, you can load it like this:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/extra.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d5/dist/extra.min.js"></script>
 ```
 
 Then, access it from `PIXI.live2d.HitAreaFrames`.

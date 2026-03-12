@@ -1,5 +1,5 @@
 {
-    "name": "pixi-live2d-display",
+    "name": "pixi-live2d5",
     "version": "v0.5.0-beta",
     "description": "Cubism 5 Live2D integration for PixiJS 8",
     "main": "dist/index.js",
