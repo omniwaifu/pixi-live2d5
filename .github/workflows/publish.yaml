@@ -28,7 +28,7 @@ jobs:
                   cache: "bun"
 
             - name: Restore Cubism core cache
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               id: cache-core
               with:
                   path: |
