@@ -1,6 +1,7 @@
 import type { InternalModelOptions } from "@/cubism-common";
 import type { CommonHitArea, CommonLayout } from "@/cubism-common/InternalModel";
 import { InternalModel } from "@/cubism-common/InternalModel";
+import { config } from "@/config";
 import type { Cubism5ModelSettings } from "@/cubism5/Cubism5ModelSettings";
 import { Cubism5MotionManager } from "@/cubism5/Cubism5MotionManager";
 import { CubismDefaultParameterId } from "@cubism/cubismdefaultparameterid";
@@ -8,11 +9,16 @@ import { BreathParameterData, CubismBreath } from "@cubism/effect/cubismbreath";
 import { CubismEyeBlink } from "@cubism/effect/cubismeyeblink";
 import { CubismFramework } from "@cubism/live2dcubismframework";
 import { CubismMatrix44 } from "@cubism/math/cubismmatrix44";
-import { csmVector } from "@cubism/type/csmvector";
 import { CubismRenderer_WebGL } from "@cubism/rendering/cubismrenderer_webgl";
-import { CubismShaderManager_WebGL } from "@cubism/rendering/cubismshader_webgl";
 import { Matrix } from "pixi.js";
 import type { Mutable } from "../types/helpers";
+import {
+    Cubism5ShaderLoadCancelledError,
+    loadCubism5Shaders,
+    normalizeCubism5ShaderPath,
+    releaseCubism5Context,
+    retainCubism5Context,
+} from "./Cubism5ShaderLoader";
 
 const tempMatrix = new CubismMatrix44();
 
@@ -32,7 +38,15 @@ export class Cubism5InternalModel extends InternalModel {
     // what's this for?
     userData?: any;
 
-    renderer: any = new CubismRenderer_WebGL();
+    renderer?: CubismRenderer_WebGL;
+
+    shaderState: "idle" | "loading" | "ready" | "error" = "idle";
+    shaderReady?: Promise<void>;
+    shaderError?: Error;
+
+    private shaderPath = "";
+    private shaderGeneration = 0;
+    private gl?: WebGL2RenderingContext;
 
     // Use actual parameter names from the Mao model instead of CubismDefaultParameterId
     idParamAngleX = "ParamAngleX";
@@ -102,8 +116,8 @@ export class Cubism5InternalModel extends InternalModel {
             this.eyeBlink = CubismEyeBlink.create(this.settings);
         }
 
-        const breathParams = new csmVector<any>();
-        breathParams.pushBack(
+        const breathParams: BreathParameterData[] = [];
+        breathParams.push(
             new BreathParameterData(
                 CubismFramework.getIdManager().getId(this.idParamAngleX),
                 0.0,
@@ -112,7 +126,7 @@ export class Cubism5InternalModel extends InternalModel {
                 0.5,
             ),
         );
-        breathParams.pushBack(
+        breathParams.push(
             new BreathParameterData(
                 CubismFramework.getIdManager().getId(this.idParamAngleY),
                 0.0,
@@ -121,7 +135,7 @@ export class Cubism5InternalModel extends InternalModel {
                 0.5,
             ),
         );
-        breathParams.pushBack(
+        breathParams.push(
             new BreathParameterData(
                 CubismFramework.getIdManager().getId(this.idParamAngleZ),
                 0.0,
@@ -130,7 +144,7 @@ export class Cubism5InternalModel extends InternalModel {
                 0.5,
             ),
         );
-        breathParams.pushBack(
+        breathParams.push(
             new BreathParameterData(
                 CubismFramework.getIdManager().getId(this.idParamBodyAngleX),
                 0.0,
@@ -139,11 +153,8 @@ export class Cubism5InternalModel extends InternalModel {
                 0.5,
             ),
         );
-        breathParams.pushBack(new BreathParameterData(this.idParamBreath, 0.0, 0.5, 3.2345, 0.5));
+        breathParams.push(new BreathParameterData(this.idParamBreath, 0.0, 0.5, 3.2345, 0.5));
         this.breath.setParameters(breathParams);
-
-        this.renderer.initialize(this.coreModel);
-        this.renderer.setIsPremultipliedAlpha(true);
     }
 
     protected getSize(): [number, number] {
@@ -180,24 +191,88 @@ export class Cubism5InternalModel extends InternalModel {
             .translate(this.originalWidth / 2, this.originalHeight / 2);
     }
 
-    updateWebGLContext(gl: WebGLRenderingContext, glContextID: number): void {
-        // reset resources that were bound to previous WebGL context
-        const renderer = this.renderer as any;
+    updateWebGLContext(
+        gl: WebGL2RenderingContext,
+        _glContextID: number,
+        contextEpoch: object,
+    ): void {
+        try {
+            if (this.gl !== gl) {
+                if (this.gl) this.releaseWebGLContext(this.gl);
+                retainCubism5Context(gl);
+                this.gl = gl;
+            }
 
-        renderer.firstDraw = true;
-        renderer._bufferData = {
-            vertex: null,
-            uv: null,
-            index: null,
-        };
-        renderer.startUp(gl);
-        renderer._clippingManager._currentFrameNo = glContextID;
-        renderer._clippingManager._maskTexture = undefined;
-        (CubismShaderManager_WebGL.getInstance() as any)._shaderSets = [];
+            this.shaderGeneration++;
+            this.shaderState = "loading";
+            this.shaderError = undefined;
+
+            this.renderer?.release();
+
+            const width = Math.max(1, Math.floor(this.viewport[2] || gl.drawingBufferWidth));
+            const height = Math.max(1, Math.floor(this.viewport[3] || gl.drawingBufferHeight));
+            const renderer = new CubismRenderer_WebGL(width, height);
+
+            this.renderer = renderer;
+            renderer.initialize(this.coreModel);
+            renderer.setIsPremultipliedAlpha(true);
+            renderer.startUp(gl);
+
+            this.shaderPath = normalizeCubism5ShaderPath(config.cubism5ShaderPath);
+
+            const generation = this.shaderGeneration;
+            const task = loadCubism5Shaders(
+                gl,
+                this.shaderPath,
+                contextEpoch,
+                () => !this.destroyed && generation === this.shaderGeneration,
+            )
+                .then(() => {
+                    if (generation === this.shaderGeneration) {
+                        this.shaderState = "ready";
+                    }
+                })
+                .catch((cause) => {
+                    if (
+                        generation !== this.shaderGeneration ||
+                        cause instanceof Cubism5ShaderLoadCancelledError
+                    ) {
+                        throw cause;
+                    }
+
+                    const error = new Error(
+                        `Failed to initialize Cubism 5 shaders from ${this.shaderPath}: ${cause instanceof Error ? cause.message : String(cause)}`,
+                        { cause },
+                    );
+
+                    this.shaderState = "error";
+                    this.shaderError = error;
+                    this.emit("shaderLoadError", error);
+
+                    throw error;
+                });
+
+            this.shaderReady = task;
+            task.catch(() => {});
+        } catch (cause) {
+            if (this.gl === gl) this.releaseWebGLContext(gl);
+
+            const error =
+                cause instanceof Error
+                    ? cause
+                    : new Error(
+                          `Failed to initialize the Cubism 5 WebGL renderer: ${String(cause)}`,
+                      );
+
+            this.shaderState = "error";
+            this.shaderError = error;
+            this.emit("shaderLoadError", error);
+            throw error;
+        }
     }
 
     bindTexture(index: number, texture: WebGLTexture): void {
-        this.renderer.bindTexture(index, texture);
+        this.renderer?.bindTexture(index, texture);
     }
 
     protected getHitAreaDefs(): CommonHitArea[] {
@@ -328,7 +403,17 @@ export class Cubism5InternalModel extends InternalModel {
         this.breath?.updateParameters(this.coreModel, dt / 1000);
     }
 
-    draw(gl: WebGLRenderingContext): void {
+    draw(gl: WebGL2RenderingContext): void {
+        if (this.shaderError) {
+            throw this.shaderError;
+        }
+
+        const renderer = this.renderer;
+
+        if (!renderer || this.shaderState !== "ready") {
+            return;
+        }
+
         const matrix = this.drawingMatrix;
         const array = tempMatrix.getArray();
 
@@ -340,15 +425,34 @@ export class Cubism5InternalModel extends InternalModel {
         array[12] = matrix.tx;
         array[13] = matrix.ty;
 
-        this.renderer.setMvpMatrix(tempMatrix);
-        this.renderer.setRenderState(gl.getParameter(gl.FRAMEBUFFER_BINDING), this.viewport);
-        this.renderer.drawModel();
+        renderer.setMvpMatrix(tempMatrix);
+        renderer.setRenderState(gl.getParameter(gl.FRAMEBUFFER_BINDING), this.viewport);
+        renderer.drawModel(this.shaderPath);
+    }
+
+    override releaseWebGLContext(gl: WebGL2RenderingContext): void {
+        if (this.gl !== gl) return;
+
+        this.shaderGeneration++;
+        const renderer = this.renderer;
+
+        this.renderer = undefined;
+        this.shaderState = "idle";
+        this.shaderReady = undefined;
+        this.shaderError = undefined;
+        this.gl = undefined;
+
+        try {
+            renderer?.release();
+        } finally {
+            releaseCubism5Context(gl);
+        }
     }
 
     destroy() {
         super.destroy();
 
-        this.renderer.release();
+        if (this.gl) this.releaseWebGLContext(this.gl);
         this.coreModel.release();
 
         (this as Partial<this>).renderer = undefined;

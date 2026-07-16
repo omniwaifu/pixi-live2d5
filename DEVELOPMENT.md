@@ -30,14 +30,23 @@ git submodule update --init
 Install dependencies:
 
 ```sh
-bun install
+bun install --ignore-scripts
 ```
 
-Download the matching Cubism 5 R4 Core files into `./core`:
+Download Core 6.0.1 and the external shaders from the matching Cubism SDK for Web R5 archive:
 
 ```sh
 bun run setup
 ```
+
+Then generate declarations and bundles:
+
+```sh
+bun run prepare
+```
+
+The install must skip lifecycle scripts on a fresh checkout because `prepare` needs the ignored Core files
+created by `bun run setup`.
 
 ## Testing
 

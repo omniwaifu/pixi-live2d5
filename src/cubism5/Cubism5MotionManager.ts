@@ -6,7 +6,6 @@ import type { Cubism5ModelSettings } from "@/cubism5/Cubism5ModelSettings";
 import { CubismMotion } from "@cubism/motion/cubismmotion";
 import { CubismMotionJson } from "@cubism/motion/cubismmotionjson";
 import { CubismMotionQueueManager } from "@cubism/motion/cubismmotionqueuemanager";
-import { csmVector } from "@cubism/type/csmvector";
 import { toCubismJsonBuffer } from "./serialization";
 import type { Cubism5MotionDefinition } from "./types";
 import type { Mutable } from "../types/helpers";
@@ -90,11 +89,9 @@ export class Cubism5MotionManager extends MotionManager<any, Cubism5MotionDefini
             );
         }
 
-        // Initialize with empty vectors to prevent null reference errors
+        // Initialize with empty arrays to prevent null reference errors
         // The motion JSON already contains all necessary parameter information
-        const emptyEyeBlinkVector = new csmVector<any>();
-        const emptyLipSyncVector = new csmVector<any>();
-        motion.setEffectIds(emptyEyeBlinkVector, emptyLipSyncVector);
+        motion.setEffectIds([], []);
 
         return motion;
     }

@@ -10,6 +10,7 @@ Live2DModel.registerTicker(Ticker);
 
 // Enable sound playback
 config.sound = true;
+config.cubism5ShaderPath = "/cubism5/shaders/";
 
 const DRAG_THRESHOLD = 6;
 const cubism5Model = "/test/assets/Mao/Mao.model3.json";
@@ -24,6 +25,7 @@ const cubism5Model = "/test/assets/Mao/Mao.model3.json";
         resizeTo: window,
         backgroundColor: 0x333333,
         preference: "webgl",
+        preferWebGLVersion: 2,
     });
     (window as any).app = app;
 

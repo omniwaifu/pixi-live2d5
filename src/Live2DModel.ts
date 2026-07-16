@@ -8,7 +8,6 @@ import {
     Point,
     ViewContainer,
     type DestroyOptions,
-    type Rectangle,
     type Renderer,
     type Texture,
     type Ticker,
@@ -16,11 +15,24 @@ import {
 import { Automator, type AutomatorOptions } from "./Automator";
 import type { JSONObject } from "./types/helpers";
 import { logger } from "./utils";
+import {
+    beginFallbackWebGLFrame,
+    endFallbackWebGLFrame,
+    getWebGLRendererContextState,
+    type WebGLRendererContextState,
+} from "./WebGLContextLifecycle";
 
 export interface Live2DModelOptions extends MotionManagerOptions, AutomatorOptions {}
 
 const tempPoint = new Point();
 const tempMatrix = new Matrix();
+
+interface SavedWebGLState {
+    drawFramebuffer: WebGLFramebuffer | null;
+    readFramebuffer: WebGLFramebuffer | null;
+    viewport: [number, number, number, number];
+    clearColor: [number, number, number, number];
+}
 
 export type Live2DConstructor = { new (options?: Live2DModelOptions): Live2DModel };
 
@@ -133,7 +145,21 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
     /**
      * WebGL context currently used to render this model.
      */
-    private glContext: WebGLRenderingContext | null = null;
+    private glContext?: WebGL2RenderingContext;
+
+    private rendererContextState?: WebGLRendererContextState;
+    private rendererContextEpoch?: object;
+    private readonly releaseRendererContext = (state: WebGLRendererContextState): void => {
+        if (this.rendererContextState !== state) return;
+
+        state.owners.delete(this.releaseRendererContext);
+        if (this.glContext) {
+            this.internalModel?.releaseWebGLContext(this.glContext);
+        }
+        this.glContext = undefined;
+        this.rendererContextState = undefined;
+        this.rendererContextEpoch = undefined;
+    };
 
     /**
      * An ID that increments when the WebGL context changes. Used by the Live2D renderer
@@ -310,91 +336,147 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
             return;
         }
 
-        const gl = (renderer as any).gl as WebGLRenderingContext | undefined;
+        const gl = (renderer as any).gl as
+            WebGLRenderingContext | WebGL2RenderingContext | undefined;
 
-        // Live2D renderer is WebGL-only (at least for now).
         if (!gl) {
+            throw new Error(
+                "Cubism SDK for Web R5 requires a Pixi WebGL 2 renderer; no WebGL context is active.",
+            );
+        }
+
+        const webGLVersion = (renderer as any).context?.webGLVersion as 1 | 2 | undefined;
+        const isWebGL2 =
+            webGLVersion === 2 ||
+            (webGLVersion === undefined &&
+                typeof WebGL2RenderingContext !== "undefined" &&
+                gl instanceof WebGL2RenderingContext);
+
+        if (!isWebGL2) {
+            throw new Error(
+                "Cubism SDK for Web R5 requires WebGL 2; the active Pixi renderer is using WebGL 1.",
+            );
+        }
+
+        const webGL2 = gl as WebGL2RenderingContext;
+
+        if (webGL2.isContextLost()) {
             return;
         }
 
-        // reset certain systems in renderer to make Live2D's drawing system compatible with Pixi
-        (renderer as any).shader?.resetState?.();
-        (renderer as any).geometry?.resetState?.();
-        (renderer as any).state?.resetState?.();
-        (renderer as any).stencil?.resetState?.();
+        const savedState = this.captureWebGLState(webGL2);
+        this.internalModel.viewport = [...savedState.viewport];
+        let fallbackFrameState: WebGLRendererContextState | undefined;
 
-        // when the WebGL context has changed
-        if (this.glContext !== gl) {
-            this.glContext = gl;
-            this.glContextID++;
+        try {
+            // Reset the Pixi systems whose cached state Cubism will bypass with raw WebGL calls.
+            (renderer as any).shader?.resetState?.();
+            (renderer as any).geometry?.resetState?.();
+            (renderer as any).state?.resetState?.();
+            (renderer as any).stencil?.resetState?.();
 
-            this.internalModel.updateWebGLContext(gl, this.glContextID);
+            const rendererContextState = getWebGLRendererContextState(renderer);
+            if (!rendererContextState.managedByPixiSystem) {
+                beginFallbackWebGLFrame(rendererContextState);
+                fallbackFrameState = rendererContextState;
+            }
+            if (
+                this.glContext !== webGL2 ||
+                this.rendererContextState !== rendererContextState ||
+                this.rendererContextEpoch !== rendererContextState.epoch
+            ) {
+                this.rendererContextState?.owners.delete(this.releaseRendererContext);
+                rendererContextState.owners.add(this.releaseRendererContext);
+                this.glContext = webGL2;
+                this.rendererContextState = rendererContextState;
+                this.rendererContextEpoch = rendererContextState.epoch;
+                this.glContextID++;
+
+                try {
+                    this.internalModel.updateWebGLContext(
+                        webGL2,
+                        this.glContextID,
+                        rendererContextState.epoch,
+                    );
+                } catch (error) {
+                    this.internalModel.releaseWebGLContext(webGL2);
+                    rendererContextState.owners.delete(this.releaseRendererContext);
+                    this.glContext = undefined;
+                    this.rendererContextState = undefined;
+                    this.rendererContextEpoch = undefined;
+                    throw error;
+                }
+            }
+
+            for (let i = 0; i < this.textures.length; i++) {
+                const texture = this.textures[i]!;
+
+                webGL2.pixelStorei(webGL2.UNPACK_FLIP_Y_WEBGL, this.internalModel.textureFlipY);
+
+                // Ensure Pixi has created/uploaded the GPU texture.
+                (renderer as any).texture.bind(texture, 0);
+
+                // Bind the underlying WebGLTexture into Live2D core.
+                const glTexture = (renderer as any).texture.getGlSource(texture.source)
+                    .texture as WebGLTexture;
+
+                this.internalModel.bindTexture(i, glTexture);
+            }
+
+            // Update only if time changed; a model may otherwise render multiple times per tick.
+            if (this.deltaTime) {
+                this.internalModel.update(this.deltaTime, this.elapsedTime);
+                this.deltaTime = 0;
+            }
+
+            const projectionMatrix = (renderer as any).globalUniforms?.globalUniformData
+                ?.projectionMatrix as Matrix | undefined;
+
+            if (!projectionMatrix) return;
+
+            const internalTransform = tempMatrix
+                .copyFrom(projectionMatrix)
+                .append(this.worldTransform);
+
+            this.internalModel.updateTransform(internalTransform);
+            this.internalModel.draw(webGL2);
+        } finally {
+            try {
+                if (fallbackFrameState) endFallbackWebGLFrame(fallbackFrameState);
+            } finally {
+                this.restorePixiWebGLState(renderer, webGL2, savedState);
+            }
         }
+    }
 
-        for (let i = 0; i < this.textures.length; i++) {
-            const texture = this.textures[i]!;
+    private captureWebGLState(gl: WebGL2RenderingContext): SavedWebGLState {
+        const viewport = gl.getParameter(gl.VIEWPORT) as Int32Array;
+        const clearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE) as Float32Array;
 
-            gl.pixelStorei(
-                WebGLRenderingContext.UNPACK_FLIP_Y_WEBGL,
-                this.internalModel.textureFlipY,
-            );
+        return {
+            drawFramebuffer: gl.getParameter(
+                gl.DRAW_FRAMEBUFFER_BINDING,
+            ) as WebGLFramebuffer | null,
+            readFramebuffer: gl.getParameter(
+                gl.READ_FRAMEBUFFER_BINDING,
+            ) as WebGLFramebuffer | null,
+            viewport: [viewport[0]!, viewport[1]!, viewport[2]!, viewport[3]!],
+            clearColor: [clearColor[0]!, clearColor[1]!, clearColor[2]!, clearColor[3]!],
+        };
+    }
 
-            // Ensure Pixi has created/uploaded the GPU texture.
-            (renderer as any).texture.bind(texture, 0);
+    private restorePixiWebGLState(
+        renderer: Renderer,
+        gl: WebGL2RenderingContext,
+        state: SavedWebGLState,
+    ): void {
+        // Restore the actual GL render target and viewport captured at entry. Pixi's logical
+        // viewport uses top-origin coordinates, while WebGL and Cubism use bottom-origin values.
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, state.drawFramebuffer);
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, state.readFramebuffer);
+        gl.viewport(...state.viewport);
+        gl.clearColor(...state.clearColor);
 
-            // Bind the underlying WebGLTexture into Live2D core.
-            const glTexture = (renderer as any).texture.getGlSource(texture.source)
-                .texture as WebGLTexture;
-
-            this.internalModel.bindTexture(i, glTexture);
-        }
-
-        const viewport = (renderer as any).renderTarget?.viewport as Rectangle | undefined;
-
-        if (viewport) {
-            this.internalModel.viewport = [viewport.x, viewport.y, viewport.width, viewport.height];
-        }
-
-        // update only if the time has changed, as the model will possibly be updated once but rendered multiple times
-        if (this.deltaTime) {
-            this.internalModel.update(this.deltaTime, this.elapsedTime);
-            this.deltaTime = 0;
-        }
-
-        const projectionMatrix = (renderer as any).globalUniforms?.globalUniformData
-            ?.projectionMatrix as Matrix | undefined;
-
-        if (!projectionMatrix) {
-            return;
-        }
-
-        const internalTransform = tempMatrix.copyFrom(projectionMatrix).append(this.worldTransform);
-
-        this.internalModel.updateTransform(internalTransform);
-        this.internalModel.draw(gl);
-
-        // Live2D draws via raw WebGL calls (viewport, clearColor, bindings...),
-        // so restore Pixi's expected render target state + resync internal caches for the next renderables.
-        const renderTargetAdaptor = (renderer as any).renderTarget?.adaptor as
-            { _viewPortCache?: Rectangle; _clearColorCache?: number[] } | undefined;
-        const viewPortCache = renderTargetAdaptor?._viewPortCache;
-        if (viewPortCache) {
-            gl.viewport(
-                viewPortCache.x,
-                viewPortCache.y,
-                viewPortCache.width,
-                viewPortCache.height,
-            );
-        }
-        const clearColorCache = renderTargetAdaptor?._clearColorCache;
-        if (clearColorCache && clearColorCache.length === 4) {
-            gl.clearColor(
-                clearColorCache[0]!,
-                clearColorCache[1]!,
-                clearColorCache[2]!,
-                clearColorCache[3]!,
-            );
-        }
         // IMPORTANT: Don't call `renderer.resetState()` here. It also resets the renderTarget system,
         // which can break the active render pass and freeze the frame.
         (renderer as any).state?.resetState?.();
@@ -420,6 +502,11 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
      */
     destroy(options?: DestroyOptions): void {
         this.emit("destroy");
+
+        this.rendererContextState?.owners.delete(this.releaseRendererContext);
+        this.rendererContextState = undefined;
+        this.rendererContextEpoch = undefined;
+        this.glContext = undefined;
 
         if (typeof options === "object" && options?.texture) {
             const destroySource = Boolean(

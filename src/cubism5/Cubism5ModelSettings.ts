@@ -155,13 +155,13 @@ export class Cubism5ModelSettings extends ModelSettings {
         return this.userData ?? "";
     }
 
-    getLayoutMap(outLayoutMap: { setValue(key: string, value: number): void }): boolean {
+    getLayoutMap(outLayoutMap: Map<string, number>): boolean {
         if (!this.layout) {
             return false;
         }
 
         Object.entries(this.layout).forEach(([key, value]) => {
-            outLayoutMap.setValue(key, value);
+            outLayoutMap.set(key, value);
         });
 
         return true;

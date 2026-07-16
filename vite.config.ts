@@ -71,6 +71,24 @@ export default defineConfig(({ command, mode }) => {
             minify: false,
         },
         plugins: [
+            isDev && {
+                name: "load-cubism-core-without-unavailable-sourcemap",
+                enforce: "pre" as const,
+                load(id) {
+                    if (id !== cubismCore) return;
+
+                    // Live2D's Core map points to ../.in/live2dcubismcore.ts, which is not shipped
+                    // in the SDK archive. Keep the downloaded Core byte-identical on disk, but
+                    // omit its unusable mapping directive while Vite serves the playground.
+                    return {
+                        code: readFileSync(cubismCore, "utf-8").replace(
+                            /\n\/\/# sourceMappingURL=live2dcubismcore\.js\.map\s*$/,
+                            "",
+                        ),
+                        map: null,
+                    };
+                },
+            },
             isTest && {
                 name: "load-cubism-core",
                 enforce: "post" as const,

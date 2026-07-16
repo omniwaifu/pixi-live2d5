@@ -311,10 +311,18 @@ export abstract class InternalModel extends EventEmitter {
 
     /**
      * Updates WebGL context bound to this model.
-     * @param gl - WebGL context.
+     * @param gl - WebGL 2 context.
      * @param glContextID - Unique ID for given WebGL context.
+     * @param contextEpoch - Unique identity for the Pixi renderer's current context generation.
      */
-    abstract updateWebGLContext(gl: WebGLRenderingContext, glContextID: number): void;
+    abstract updateWebGLContext(
+        gl: WebGL2RenderingContext,
+        glContextID: number,
+        contextEpoch: object,
+    ): void;
+
+    /** Releases resources owned by this model for a Pixi renderer context. */
+    releaseWebGLContext(_gl: WebGL2RenderingContext): void {}
 
     /**
      * Binds a texture to the model. The index must be the same as that of this texture
@@ -325,5 +333,5 @@ export abstract class InternalModel extends EventEmitter {
     /**
      * Draws the model.
      */
-    abstract draw(gl: WebGLRenderingContext): void;
+    abstract draw(gl: WebGL2RenderingContext): void;
 }

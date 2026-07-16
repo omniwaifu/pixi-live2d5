@@ -22,8 +22,8 @@
 #### 要求
 
 - PixiJS：8.19 或更高的 8.x 版本
-- Cubism Core：5 R4
-- 浏览器：WebGL， ES6
+- Cubism SDK for Web：R5（Framework 5-r.5，Core 6.0.1）
+- 浏览器：WebGL 2，ES6
 
 #### 文档
 
@@ -40,6 +40,15 @@ Cubism 是 Live2D SDK 的名称。这个 fork 只提供 Cubism 5 的集成。
 
 Cubism 5 需要加载 `live2dcubismcore.min.js` 或 `live2dcubismcore.js`，可以从 [Cubism 5 SDK](https://www.live2d.com/download/cubism-sdk/download-web/) 里获取。
 
+R5 还会在运行时加载 13 个 GLSL 文件。请把仓库中的 `public/cubism5/shaders` 目录作为
+`/cubism5/shaders/` 提供，或者在第一次渲染模型前配置其他静态目录：
+
+```javascript
+import { config } from "pixi-live2d5";
+
+config.cubism5ShaderPath = "/assets/cubism5/shaders/";
+```
+
 #### 打包文件
 
 该包提供根入口和 `pixi-live2d5/cubism5` 两种入口。旧的 `cubism2` / `cubism4` 子路径不属于这个 fork 的公开支持范围。
@@ -53,12 +62,12 @@ Cubism 5 需要加载 `live2dcubismcore.min.js` 或 `live2dcubismcore.js`，可�
 ```sh
 git clone --recursive https://github.com/omniwaifu/pixi-live2d5.git
 cd pixi-live2d5
-bun install
+bun install --ignore-scripts
 bun run setup
-bun run build
+bun run prepare
 ```
 
-`bun run setup` 会下载与其匹配的 Cubism 5 R4 Core 文件，供 playground 和浏览器 smoke test 使用。
+`bun run setup` 会从匹配的 Cubism SDK for Web R5 归档中下载 Core 6.0.1 和 shader 文件，供 playground 和浏览器 smoke test 使用。安装时使用 `--ignore-scripts`，因为该包的 `prepare` 步骤必须在 Core 文件存在后才能运行。
 
 然后在你的项目里 link：
 
@@ -83,6 +92,8 @@ window.PIXI = PIXI;
     await app.init({
         canvas: document.getElementById("canvas"),
         resizeTo: window,
+        preference: "webgl",
+        preferWebGLVersion: 2,
     });
 
     const model = await Live2DModel.from("mao.model3.json");
@@ -122,6 +133,8 @@ Live2DModel.registerTicker(Ticker);
     await app.init({
         canvas: document.getElementById("canvas"),
         resizeTo: window,
+        preference: "webgl",
+        preferWebGLVersion: 2,
     });
 
     const model = await Live2DModel.from("mao.model3.json");

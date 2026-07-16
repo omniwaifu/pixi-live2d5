@@ -25,8 +25,8 @@ supported surface down to the production path this repo actually builds, types, 
 #### Requirements
 
 - PixiJS: 8.19 or newer within the 8.x line
-- Cubism Core: 5 R4
-- Browser: WebGL, ES6
+- Cubism SDK for Web: R5 (Framework 5-r.5, Core 6.0.1)
+- Browser: WebGL 2, ES6
 
 #### Documentations
 
@@ -45,6 +45,15 @@ Before using the plugin, you'll need to include the Cubism runtime library, aka 
 For Cubism 5, you need `live2dcubismcore.min.js` or `live2dcubismcore.js` from
 the [Cubism 5 SDK](https://www.live2d.com/download/cubism-sdk/download-web/).
 
+R5 also loads 13 GLSL files at runtime. Serve the tracked `public/cubism5/shaders` directory at
+`/cubism5/shaders/`, or configure a different public directory before the first model is rendered:
+
+```javascript
+import { config } from "pixi-live2d5";
+
+config.cubism5ShaderPath = "/assets/cubism5/shaders/";
+```
+
 #### Bundle
 
 The package exposes the root entrypoint and `pixi-live2d5/cubism5`. Legacy `cubism2` / `cubism4` subpaths are
@@ -60,12 +69,14 @@ project. Use it from a local checkout:
 ```sh
 git clone --recursive https://github.com/omniwaifu/pixi-live2d5.git
 cd pixi-live2d5
-bun install
+bun install --ignore-scripts
 bun run setup
-bun run build
+bun run prepare
 ```
 
-`bun run setup` downloads the matching Cubism 5 R4 Core files used by the playground and browser smoke tests.
+`bun run setup` downloads Core 6.0.1 and the matching shaders from the Cubism SDK for Web R5 archive for use by
+the playground and browser smoke tests. The install uses `--ignore-scripts` because the package's `prepare`
+step needs those Core files to exist first.
 
 Then link it to your project:
 
@@ -91,6 +102,8 @@ window.PIXI = PIXI;
     await app.init({
         canvas: document.getElementById("canvas"),
         resizeTo: window,
+        preference: "webgl",
+        preferWebGLVersion: 2,
     });
 
     const model = await Live2DModel.from("mao.model3.json");
@@ -135,6 +148,8 @@ Live2DModel.registerTicker(Ticker);
     await app.init({
         canvas: document.getElementById("canvas"),
         resizeTo: window,
+        preference: "webgl",
+        preferWebGLVersion: 2,
     });
 
     const model = await Live2DModel.from("mao.model3.json");

@@ -17,4 +17,8 @@ config.motionSync = true;
 config.motionFadingDuration = 500;
 config.idleMotionFadingDuration = 500;
 config.expressionFadingDuration = 500;
+
+// Public URL for the 13 external GLSL files required by Cubism SDK for Web R5.
+// Configure this before the first Cubism 5 model is rendered.
+config.cubism5ShaderPath = "/cubism5/shaders/";
 ```

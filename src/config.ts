@@ -59,6 +59,12 @@ export const config = {
      */
     preserveExpressionOnMotion: true,
 
+    /**
+     * Public directory containing the 13 external shaders required by Cubism SDK for Web R5.
+     * This must be configured before the first Cubism 5 model is rendered.
+     */
+    cubism5ShaderPath: "/cubism5/shaders/",
+
     cubism5: { logLevel: CSM_LOG_LEVEL_WARNING },
 };
 

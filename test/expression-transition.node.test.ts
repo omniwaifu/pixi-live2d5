@@ -6,7 +6,7 @@ import { CubismFramework } from "@cubism/live2dcubismframework";
 import { CubismExpressionMotionManager } from "@cubism/motion/cubismexpressionmotionmanager";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-type ParameterId = { getString(): { s: string } };
+type ParameterId = { getString(): string };
 
 class TestModel {
     private readonly baseline = new Map<string, number>();
@@ -30,24 +30,24 @@ class TestModel {
     }
 
     getParameterValueById(id: ParameterId): number {
-        return this.get(id.getString().s);
+        return this.get(id.getString());
     }
 
     setParameterValueById(id: ParameterId, value: number, weight = 1): void {
-        const key = id.getString().s;
+        const key = id.getString();
         const current = this.get(key);
 
         this.values.set(key, current * (1 - weight) + value * weight);
     }
 
     addParameterValueById(id: ParameterId, value: number, weight = 1): void {
-        const key = id.getString().s;
+        const key = id.getString();
 
         this.values.set(key, this.get(key) + value * weight);
     }
 
     multiplyParameterValueById(id: ParameterId, value: number, weight = 1): void {
-        const key = id.getString().s;
+        const key = id.getString();
 
         this.values.set(key, this.get(key) * (1 + (value - 1) * weight));
     }

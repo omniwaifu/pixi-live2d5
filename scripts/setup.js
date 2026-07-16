@@ -1,4 +1,5 @@
-import { createWriteStream, existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "fs";
+import { createHash } from "crypto";
 import JSZip from "jszip";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -6,11 +7,30 @@ import { fileURLToPath } from "url";
 const overwriteExisting = true;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const coreDir = resolve(__dirname, "../core") + "/";
-const cubismVersion = "5-r.4";
+const shaderDir = resolve(__dirname, "../public/cubism5/shaders") + "/";
+const cubismVersion = "5-r.5";
+// Locally observed for reproducibility; Live2D does not publish this archive checksum.
+const cubismArchiveSha256 = "67064a7fb1812cf502f5c4a03bfe12cc638c75a621bb4acf06bb28763df06ba0";
+const shaderFiles = [
+    "fragshadersrcalphablend.frag",
+    "fragshadersrccolorblend.frag",
+    "fragshadersrccopy.frag",
+    "fragshadersrcmaskinvertedpremultipliedalpha.frag",
+    "fragshadersrcmaskpremultipliedalpha.frag",
+    "fragshadersrcpremultipliedalpha.frag",
+    "fragshadersrcpremultipliedalphablend.frag",
+    "fragshadersrcsetupmask.frag",
+    "vertshadersrc.vert",
+    "vertshadersrcblend.vert",
+    "vertshadersrccopy.vert",
+    "vertshadersrcmasked.vert",
+    "vertshadersrcsetupmask.vert",
+];
 
 const assets = [
     {
         url: `https://cubism.live2d.com/sdk-web/bin/CubismSdkForWeb-${cubismVersion}.zip`,
+        sha256: cubismArchiveSha256,
         zipEntries: [
             {
                 entryFile: `CubismSdkForWeb-${cubismVersion}/Core/live2dcubismcore.js`,
@@ -20,6 +40,10 @@ const assets = [
                 entryFile: `CubismSdkForWeb-${cubismVersion}/Core/live2dcubismcore.d.ts`,
                 outputFile: coreDir + "live2dcubismcore.d.ts",
             },
+            ...shaderFiles.map((file) => ({
+                entryFile: `CubismSdkForWeb-${cubismVersion}/Framework/Shaders/WebGL/${file}`,
+                outputFile: shaderDir + file,
+            })),
         ],
     },
 ];
@@ -31,7 +55,7 @@ async function main() {
     console.log("Done");
 }
 
-async function download({ url, file, zipEntries }) {
+async function download({ url, file, zipEntries, sha256 }) {
     console.log("Downloading", url);
 
     if (file) {
@@ -49,11 +73,27 @@ async function download({ url, file, zipEntries }) {
         }
     }
 
-    const arrayBuffer = await fetch(url).then((res) => res.arrayBuffer());
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to download ${url}: HTTP ${response.status} ${response.statusText}`,
+        );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     if (!buffer.length) {
         throw new Error("got empty response from " + url);
+    }
+
+    if (sha256) {
+        const actualSha256 = createHash("sha256").update(buffer).digest("hex");
+
+        if (actualSha256 !== sha256) {
+            throw new Error(`SHA-256 mismatch for ${url}: expected ${sha256}, got ${actualSha256}`);
+        }
     }
 
     if (file) {
@@ -66,6 +106,7 @@ async function download({ url, file, zipEntries }) {
 
 async function unzip(zipEntries, buffer) {
     const zip = await JSZip.loadAsync(buffer);
+    const extracted = [];
 
     for (const { entryFile, outputFile } of zipEntries) {
         if (!overwriteExisting && existsSync(outputFile)) {
@@ -73,12 +114,14 @@ async function unzip(zipEntries, buffer) {
             continue;
         }
 
-        console.log("Extracting ", outputFile);
-
         let zipFile;
 
         if (typeof entryFile === "string") {
             zipFile = zip.file(entryFile);
+
+            if (!zipFile) {
+                throw new Error(`No zip entry found for ${entryFile}`);
+            }
         } else {
             const zipFiles = zip.file(entryFile);
 
@@ -96,13 +139,55 @@ async function unzip(zipEntries, buffer) {
             zipFile = zipFiles[0];
         }
 
-        await new Promise((resolve, reject) => {
-            zipFile
-                .nodeStream()
-                .pipe(createWriteStream(outputFile, "utf8"))
-                .on("finish", resolve)
-                .on("error", reject);
+        extracted.push({
+            outputFile,
+            data: await zipFile.async("nodebuffer"),
         });
+    }
+
+    // Validate and extract every entry before changing any destination. Stage alongside each
+    // output so the final rename stays on the same filesystem, and roll back the whole set if a
+    // commit rename fails.
+    const token = `${process.pid}-${Date.now()}`;
+    const staged = extracted.map(({ outputFile, data }, index) => ({
+        outputFile,
+        data,
+        tempFile: `${outputFile}.tmp-${token}-${index}`,
+        backupFile: `${outputFile}.bak-${token}-${index}`,
+        hadOriginal: existsSync(outputFile),
+        committed: false,
+    }));
+
+    try {
+        for (const item of staged) {
+            mkdirSync(dirname(item.outputFile), { recursive: true });
+            writeFileSync(item.tempFile, item.data);
+        }
+
+        for (const item of staged) {
+            console.log("Extracting ", item.outputFile);
+            if (item.hadOriginal) renameSync(item.outputFile, item.backupFile);
+            renameSync(item.tempFile, item.outputFile);
+            item.committed = true;
+        }
+
+        for (const item of staged) {
+            if (item.hadOriginal) rmSync(item.backupFile, { force: true });
+        }
+    } catch (error) {
+        for (const item of [...staged].reverse()) {
+            if (item.committed) rmSync(item.outputFile, { force: true });
+            if (item.hadOriginal && existsSync(item.backupFile)) {
+                renameSync(item.backupFile, item.outputFile);
+            }
+        }
+
+        throw error;
+    } finally {
+        for (const item of staged) {
+            rmSync(item.tempFile, { force: true });
+            rmSync(item.backupFile, { force: true });
+        }
     }
 }
 

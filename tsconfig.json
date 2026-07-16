@@ -9,6 +9,7 @@
         "moduleResolution": "bundler",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
+        "useDefineForClassFields": false,
         "noUncheckedIndexedAccess": true,
         "skipLibCheck": true,
         "resolveJsonModule": true,
