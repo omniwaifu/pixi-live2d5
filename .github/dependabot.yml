@@ -9,6 +9,17 @@ updates:
           time: "09:00"
           timezone: "America/Chicago"
       open-pull-requests-limit: 5
+      groups:
+          bun-dependencies:
+              patterns:
+                  - "*"
+      ignore:
+          - dependency-name: "typescript"
+            update-types:
+                - "version-update:semver-major"
+          - dependency-name: "@types/node"
+            update-types:
+                - "version-update:semver-major"
 
     - package-ecosystem: "pip"
       directory: "/docs"
@@ -18,6 +29,10 @@ updates:
           time: "09:00"
           timezone: "America/Chicago"
       open-pull-requests-limit: 5
+      groups:
+          docs-dependencies:
+              patterns:
+                  - "*"
 
     - package-ecosystem: "github-actions"
       directory: "/"
@@ -27,3 +42,7 @@ updates:
           time: "09:00"
           timezone: "America/Chicago"
       open-pull-requests-limit: 5
+      groups:
+          github-actions:
+              patterns:
+                  - "*"
