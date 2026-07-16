@@ -18,7 +18,7 @@
             "@/*": ["src/*"],
             "@cubism/*": ["cubism/src/*"]
         },
-        "types": ["node", "@vitest/browser/providers/playwright"],
+        "types": ["node", "@vitest/browser-playwright"],
         "lib": ["esnext", "dom", "dom.iterable"]
     },
     "include": [

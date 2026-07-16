@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "fs";
 import path from "path";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
 import packageJson from "./package.json";
 
@@ -90,7 +91,7 @@ export default defineConfig(({ command, mode }) => {
             browser: {
                 enabled: true,
                 headless: true,
-                provider: "playwright",
+                provider: playwright(),
                 instances: [{ browser: "chromium" }],
             },
             setupFiles: ["./test/setup.ts"],
