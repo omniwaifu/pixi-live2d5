@@ -256,19 +256,24 @@ export class Cubism5InternalModel extends InternalModel {
 
         const model = this.coreModel;
 
+        // Expressions are relative to the parameters produced by the current motion. Restore the
+        // previous motion state first, then save the newly updated motion state before applying
+        // transient effects such as expressions, eye blinking, and breathing.
+        model.loadParameters();
+
         this.emit("beforeMotionUpdate");
 
         const motionUpdated = this.motionManager.update(this.coreModel, now);
 
         this.emit("afterMotionUpdate");
 
-        this.motionManager.expressionManager?.update(model, now);
+        model.saveParameters();
 
         if (!motionUpdated) {
             this.eyeBlink?.updateParameters(model, dt);
         }
 
-        model.saveParameters();
+        this.motionManager.expressionManager?.update(model, now);
 
         // revert the timestamps to be milliseconds
         this.updateNaturalMovements(dt * 1000, now * 1000);

@@ -22,14 +22,6 @@ You can import it from the `extra` bundle.
 import { HitAreaFrames } from "pixi-live2d5/extra";
 ```
 
-For using CDNs, you can load it like this:
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d5/dist/extra.min.js"></script>
-```
-
-Then, access it from `PIXI.live2d.HitAreaFrames`.
-
 ## Loading model from uploaded files (experimental)
 
 `Live2DModel` can be created from an array of `File`s. Each `File` must have a [`webkitRelativePath`](https://developer.mozilla.org/en-US/docs/Web/API/File/webkitRelativePath) property that represents relative path of the file.

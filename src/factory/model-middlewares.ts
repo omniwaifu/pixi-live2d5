@@ -5,7 +5,6 @@ import { Live2DLoader } from "@/factory/Live2DLoader";
 import { createTexture } from "@/factory/texture";
 import { logger } from "@/utils";
 import type { Middleware } from "@/utils/middleware";
-import { noop } from "lodash-es";
 
 const TAG = "Live2DFactory";
 
@@ -152,7 +151,7 @@ export const setupEssentials: Middleware<Live2DFactoryContext> = async (context,
         );
 
         // we'll handle the error later (using await), this catch() is to suppress the unhandled rejection warning
-        loadingTextures.catch(noop);
+        loadingTextures.catch(() => {});
 
         // wait for the internal model to be created
         await next();

@@ -376,8 +376,7 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
         // Live2D draws via raw WebGL calls (viewport, clearColor, bindings...),
         // so restore Pixi's expected render target state + resync internal caches for the next renderables.
         const renderTargetAdaptor = (renderer as any).renderTarget?.adaptor as
-            | { _viewPortCache?: Rectangle; _clearColorCache?: number[] }
-            | undefined;
+            { _viewPortCache?: Rectangle; _clearColorCache?: number[] } | undefined;
         const viewPortCache = renderTargetAdaptor?._viewPortCache;
         if (viewPortCache) {
             gl.viewport(

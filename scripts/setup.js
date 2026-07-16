@@ -6,17 +6,18 @@ import { fileURLToPath } from "url";
 const overwriteExisting = true;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const coreDir = resolve(__dirname, "../core") + "/";
+const cubismVersion = "5-r.4";
 
 const assets = [
     {
-        url: "https://cubism.live2d.com/sdk-web/bin/CubismSdkForWeb-5-r.2.zip",
+        url: `https://cubism.live2d.com/sdk-web/bin/CubismSdkForWeb-${cubismVersion}.zip`,
         zipEntries: [
             {
-                entryFile: "CubismSdkForWeb-5-r.2/Core/live2dcubismcore.js",
+                entryFile: `CubismSdkForWeb-${cubismVersion}/Core/live2dcubismcore.js`,
                 outputFile: coreDir + "live2dcubismcore.js",
             },
             {
-                entryFile: "CubismSdkForWeb-5-r.2/Core/live2dcubismcore.d.ts",
+                entryFile: `CubismSdkForWeb-${cubismVersion}/Core/live2dcubismcore.d.ts`,
                 outputFile: coreDir + "live2dcubismcore.d.ts",
             },
         ],

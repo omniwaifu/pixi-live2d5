@@ -15,25 +15,31 @@ permissions:
 
 jobs:
     validate:
-        name: Lint, Test, and Pack
+        name: Typecheck, Lint, Test, Build, and Docs
         runs-on: ubuntu-24.04
         timeout-minutes: 25
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
               with:
                   submodules: recursive
 
-            - uses: oven-sh/setup-bun@v2
+            - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
               with:
-                  bun-version: 1.3.5
+                  bun-version: 1.3.14
 
-            - uses: actions/setup-node@v6
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
               with:
                   node-version: 24
                   cache: "bun"
 
+            - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+              with:
+                  python-version: "3.13"
+                  cache: "pip"
+                  cache-dependency-path: docs/requirements.txt
+
             - name: Restore Cubism core cache
-              uses: actions/cache@v5
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
               id: cache-core
               with:
                   path: |
@@ -41,19 +47,22 @@ jobs:
                       core/live2dcubismcore.d.ts
                   key: cubism-core-${{ runner.os }}-${{ hashFiles('scripts/setup.js') }}
 
-            - run: bun install --frozen-lockfile
+            - run: bun install --frozen-lockfile --ignore-scripts
+            - run: bun audit
 
             - name: Download Cubism 5 core
               if: steps.cache-core.outputs.cache-hit != 'true'
               run: bun run setup
 
-            - name: Ensure Xvfb is available
-              run: |
-                  if ! command -v xvfb-run >/dev/null 2>&1; then
-                    sudo apt-get update
-                    sudo apt-get install -y xvfb
-                  fi
+            - name: Install Playwright Chromium
+              run: bunx playwright install --with-deps chromium
 
+            - run: bun run typecheck
             - run: bun run lint
-            - run: xvfb-run -a bun run test
-            - run: bun pm pack --dry-run
+            - run: bun run type
+            - run: bun run typecheck:declarations
+            - run: bun run build
+            - run: bun run test:node
+            - run: bun run test:browser
+            - run: python -m pip install -r docs/requirements.txt
+            - run: python -m mkdocs build --strict -f docs/mkdocs.yml

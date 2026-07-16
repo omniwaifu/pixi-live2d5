@@ -7,6 +7,10 @@ import { createInternalModel } from "../src/factory/model-middlewares";
 class FakeModelSettings extends ModelSettings {
     moc = "fake.moc3";
     textures = ["texture.png"];
+
+    public constructor(json: { url: string }) {
+        super(json);
+    }
 }
 
 describe("createInternalModel middleware", () => {

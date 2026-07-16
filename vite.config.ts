@@ -3,10 +3,7 @@
 import { existsSync, readFileSync } from "fs";
 import path from "path";
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
-import { BaseSequencer } from "vitest/node";
 import packageJson from "./package.json";
-import { testRpcPlugin } from "./test/rpc/rpc-server";
 
 const cubismSubmodule = path.resolve(__dirname, "cubism");
 const cubismCore = path.resolve(__dirname, "core/live2dcubismcore.js");
@@ -73,11 +70,6 @@ export default defineConfig(({ command, mode }) => {
             minify: false,
         },
         plugins: [
-            // pixi.js imports a polyfill package named "url", which breaks Vitest
-            // see https://github.com/vitest-dev/vitest/issues/4535
-            isTest && nodePolyfills(),
-
-            isTest && testRpcPlugin(),
             isTest && {
                 name: "load-cubism-core",
                 enforce: "post" as const,
@@ -97,31 +89,11 @@ export default defineConfig(({ command, mode }) => {
             include: ["**/*.browser.test.ts", "**/*.browser.test.js"],
             browser: {
                 enabled: true,
-                name: "chrome",
-                slowHijackESM: false,
+                headless: true,
+                provider: "playwright",
+                instances: [{ browser: "chromium" }],
             },
             setupFiles: ["./test/setup.ts"],
-            sequence: {
-                sequencer: class MySequencer extends BaseSequencer {
-                    // use the default sorting, then put bundle tests at the end
-                    // to make sure they will not pollute the environment for other tests
-                    override async sort(files: Parameters<BaseSequencer["sort"]>[0]) {
-                        files = await super.sort(files);
-
-                        const bundleTestFiles: typeof files = [];
-
-                        files = files.filter(([project, file]) => {
-                            if (file.includes("bundle")) {
-                                bundleTestFiles.push([project, file]);
-                                return false;
-                            }
-                            return true;
-                        });
-
-                        return [...files, ...bundleTestFiles];
-                    }
-                },
-            },
         },
     };
 });

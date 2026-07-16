@@ -13,26 +13,26 @@ supported surface down to the production path this repo actually builds, types, 
 
 #### Features
 
--   Supports Cubism 5 Live2D models
--   Best-effort compatibility for older `.moc3` / `.model3.json` models that still load through the Cubism 5 SDK
--   Supports PIXI.RenderTexture and PIXI.Filter
--   Pixi-style transform APIs: position, scale, rotation, skew, anchor
--   Automatic interactions: focusing, hit-testing
--   Enhanced motion reserving logic compared to the official framework
--   Loading from uploaded files / zip files (experimental)
--   Fully typed - we all love types!
+- Supports Cubism 5 Live2D models
+- Best-effort compatibility for older `.moc3` / `.model3.json` models that still load through the Cubism 5 SDK
+- Supports PIXI.RenderTexture and PIXI.Filter
+- Pixi-style transform APIs: position, scale, rotation, skew, anchor
+- Automatic interactions: focusing, hit-testing
+- Enhanced motion reserving logic compared to the official framework
+- Loading from uploaded files / zip files (experimental)
+- Fully typed - we all love types!
 
 #### Requirements
 
--   PixiJS: 8.x
--   Cubism core: 5
--   Browser: WebGL, ES6
+- PixiJS: 8.19 or newer within the 8.x line
+- Cubism Core: 5 R4
+- Browser: WebGL, ES6
 
 #### Documentations
 
--   [Documentation](docs/docs/index.md)
--   [API Documentation](docs/docs/api_index.md)
--   [Development Notes](DEVELOPMENT.md)
+- [Documentation](docs/docs/index.md)
+- [API Documentation](docs/docs/api_index.md)
+- [Development Notes](DEVELOPMENT.md)
 
 ## Cubism
 
@@ -53,20 +53,19 @@ not part of this fork.
 ## Installation
 
 This repository is maintained as the `omniwaifu/pixi-live2d5` fork of the original `pixi-live2d-display`
-project. The published package is now `pixi-live2d5`, which matches the repository name and the maintained scope
-of the fork.
+project. Use it from a local checkout:
 
 #### Local Checkout
 
 ```sh
-git clone https://github.com/omniwaifu/pixi-live2d5.git
+git clone --recursive https://github.com/omniwaifu/pixi-live2d5.git
 cd pixi-live2d5
 bun install
 bun run setup
 bun run build
 ```
 
-`bun run setup` downloads the Cubism 5 core files used by the playground and browser smoke tests.
+`bun run setup` downloads the matching Cubism 5 R4 Core files used by the playground and browser smoke tests.
 
 Then link it to your project:
 

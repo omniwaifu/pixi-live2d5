@@ -10,25 +10,25 @@
 
 #### 特性
 
--   支持 Cubism 5 Live2D 模型
--   对仍然能被 Cubism 5 SDK 加载的旧版 `.moc3` / `.model3.json` 模型提供 best-effort 兼容
--   支持 PIXI.RenderTexture 和 PIXI.Filter
--   Pixi 风格的变换 API：position, scale, rotation, skew, anchor
--   自动交互：鼠标跟踪, 点击命中检测
--   比官方框架更好的动作预约逻辑
--   从上传的文件或 zip 文件中加载 (实验性功能)
--   完善的类型定义 - 我们都喜欢类型！
+- 支持 Cubism 5 Live2D 模型
+- 对仍然能被 Cubism 5 SDK 加载的旧版 `.moc3` / `.model3.json` 模型提供 best-effort 兼容
+- 支持 PIXI.RenderTexture 和 PIXI.Filter
+- Pixi 风格的变换 API：position, scale, rotation, skew, anchor
+- 自动交互：鼠标跟踪, 点击命中检测
+- 比官方框架更好的动作预约逻辑
+- 从上传的文件或 zip 文件中加载 (实验性功能)
+- 完善的类型定义 - 我们都喜欢类型！
 
 #### 要求
 
--   PixiJS：8.x
--   Cubism core：5
--   浏览器：WebGL， ES6
+- PixiJS：8.19 或更高的 8.x 版本
+- Cubism Core：5 R4
+- 浏览器：WebGL， ES6
 
 #### 文档
 
--   [文档](docs/docs/index.md)（暂无中文翻译）
--   [API 文档](docs/docs/api_index.md)
+- [文档](docs/docs/index.md)（暂无中文翻译）
+- [API 文档](docs/docs/api_index.md)
 
 ## Cubism
 
@@ -46,20 +46,19 @@ Cubism 5 需要加载 `live2dcubismcore.min.js` 或 `live2dcubismcore.js`，可�
 
 ## 安装
 
-这个仓库是原始 `pixi-live2d-display` 项目的 `omniwaifu/pixi-live2d5` fork。发布的包名现在也是
-`pixi-live2d5`，与仓库名称和这个 fork 的维护范围保持一致。
+这个仓库是原始 `pixi-live2d-display` 项目的 `omniwaifu/pixi-live2d5` fork。请通过本地 checkout 使用：
 
 #### 本地 checkout
 
 ```sh
-git clone https://github.com/omniwaifu/pixi-live2d5.git
+git clone --recursive https://github.com/omniwaifu/pixi-live2d5.git
 cd pixi-live2d5
 bun install
 bun run setup
 bun run build
 ```
 
-`bun run setup` 会下载 playground 和浏览器 smoke test 所需的 Cubism 5 Core 文件。
+`bun run setup` 会下载与其匹配的 Cubism 5 R4 Core 文件，供 playground 和浏览器 smoke test 使用。
 
 然后在你的项目里 link：
 
