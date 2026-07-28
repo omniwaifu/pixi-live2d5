@@ -65,6 +65,9 @@
     "peerDependencies": {
         "pixi.js": "^8.19.0"
     },
+    "overrides": {
+        "brace-expansion": "5.0.8"
+    },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/node": "^24.13.3",
