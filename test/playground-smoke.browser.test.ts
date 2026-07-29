@@ -3,7 +3,12 @@ import "./load-cores";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Application, Point, Sprite, Texture, Ticker } from "pixi.js";
 import * as PIXI from "pixi.js";
-import { CUBISM5_SHADER_FILES } from "../src/cubism5/Cubism5ShaderLoader";
+import { CubismWebGLOffscreenManager } from "@cubism/rendering/cubismoffscreenmanager";
+import {
+    CUBISM5_SHADER_FILES,
+    releaseCubism5Context,
+    retainCubism5Context,
+} from "../src/cubism5/Cubism5ShaderLoader";
 
 const SHADER_PATH = "/cubism5/shaders/";
 const MODEL_URL = "/test/assets/Mao/Mao.model3.json";
@@ -191,6 +196,39 @@ describe("Cubism 5 browser smoke", () => {
         expect(second.internalModel.shaderState).toBe("ready");
         expect(first.internalModel.shaderState).toBe("ready");
         expect(shaderFetches).toBe(0);
+    });
+
+    it("recreates shared offscreen targets after one same-context model is released", () => {
+        const gl = (app.renderer as any).gl as WebGL2RenderingContext;
+        const manager = CubismWebGLOffscreenManager.getInstance();
+
+        retainCubism5Context(gl);
+        retainCubism5Context(gl);
+
+        try {
+            const original = manager.getOffscreenRenderTargetContainers(gl, 16, 16, null!);
+            const originalTexture = original.getColorBuffer();
+            const originalFramebuffer = original.getRenderTexture();
+
+            expect(gl.isTexture(originalTexture)).toBe(true);
+            expect(gl.isFramebuffer(originalFramebuffer)).toBe(true);
+
+            releaseCubism5Context(gl);
+
+            expect(gl.isTexture(originalTexture)).toBe(false);
+            expect(gl.isFramebuffer(originalFramebuffer)).toBe(false);
+            expect(manager.getContainerSize(gl)).toBe(0);
+
+            const replacement = manager.getOffscreenRenderTargetContainers(gl, 16, 16, null!);
+
+            expect(replacement.getColorBuffer()).not.toBe(originalTexture);
+            expect(replacement.getRenderTexture()).not.toBe(originalFramebuffer);
+            expect(gl.isTexture(replacement.getColorBuffer())).toBe(true);
+            expect(gl.isFramebuffer(replacement.getRenderTexture())).toBe(true);
+            expect(gl.getError()).toBe(gl.NO_ERROR);
+        } finally {
+            releaseCubism5Context(gl);
+        }
     });
 
     it("restores Pixi's FBO during the first shader-gated render", async () => {

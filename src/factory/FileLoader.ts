@@ -1,4 +1,4 @@
-import type { InternalModel, ModelSettings } from "@/cubism-common";
+import type { ModelSettings } from "@/cubism-common";
 import type { Live2DFactoryContext } from "@/factory";
 import { Live2DFactory } from "@/factory";
 import { resolveUrl } from "@/utils/url";
@@ -66,7 +66,6 @@ export class FileLoader {
     static factory: Middleware<Live2DFactoryContext> = async (context, next) => {
         if (Array.isArray(context.source) && context.source[0] instanceof File) {
             const files = context.source as File[];
-
             let settings = (files as ExtendedFileList).settings;
 
             if (!settings) {
@@ -75,39 +74,54 @@ export class FileLoader {
                 throw new Error('"_objectURL" must be specified in ModelSettings');
             }
 
-            settings.validateFiles(files.map((file) => encodeURI(file.webkitRelativePath)));
-
-            await FileLoader.upload(files, settings);
-
-            // override the default method to resolve URL from uploaded files
-            settings.resolveURL = function (url) {
-                return FileLoader.resolveURL(this._objectURL!, url);
+            const objectURL = settings._objectURL;
+            let cleaned = false;
+            const cleanup = () => {
+                if (cleaned) return;
+                cleaned = true;
+                FileLoader.cleanup(objectURL);
             };
 
-            context.source = settings;
+            // Register cleanup before validation or upload so every subsequent failure path
+            // releases both the settings URL and any resource URLs created along the way.
+            context.live2dModel.once("destroy", cleanup);
 
-            // clean up when destroying the model
-            context.live2dModel.once("modelLoaded", (internalModel: InternalModel) => {
-                internalModel.once("destroy", function (this: InternalModel) {
-                    const objectURL = this.settings._objectURL!;
+            try {
+                settings.validateFiles(files.map((file) => encodeURI(file.webkitRelativePath)));
 
-                    URL.revokeObjectURL(objectURL);
+                await FileLoader.upload(files, settings);
 
-                    if (FileLoader.filesMap[objectURL]) {
-                        for (const resourceObjectURL of Object.values(
-                            FileLoader.filesMap[objectURL]!,
-                        )) {
-                            URL.revokeObjectURL(resourceObjectURL);
-                        }
-                    }
+                // override the default method to resolve URL from uploaded files
+                settings.resolveURL = function (url) {
+                    return FileLoader.resolveURL(this._objectURL!, url);
+                };
 
-                    delete FileLoader.filesMap[objectURL];
-                });
-            });
+                context.source = settings;
+
+                return await next();
+            } catch (error) {
+                cleanup();
+                throw error;
+            }
         }
 
         return next();
     };
+
+    private static cleanup(objectURL: string): void {
+        if (objectURL.startsWith("blob:")) {
+            URL.revokeObjectURL(objectURL);
+        }
+
+        const fileMap = FileLoader.filesMap[objectURL];
+        if (fileMap) {
+            for (const resourceObjectURL of Object.values(fileMap)) {
+                URL.revokeObjectURL(resourceObjectURL);
+            }
+        }
+
+        delete FileLoader.filesMap[objectURL];
+    }
 
     /**
      * Consumes the files by storing their object URLs. Files not defined in the settings will be ignored.
@@ -115,15 +129,22 @@ export class FileLoader {
     static async upload(files: File[], settings: ModelSettings): Promise<void> {
         const fileMap: Record<string, string> = {};
 
-        // only consume the files defined in settings
-        for (const definedFile of settings.getDefinedFiles()) {
-            const actualPath = decodeURI(resolveUrl(settings.url, definedFile));
+        try {
+            // only consume the files defined in settings
+            for (const definedFile of settings.getDefinedFiles()) {
+                const actualPath = decodeURI(resolveUrl(settings.url, definedFile));
 
-            const actualFile = files.find((file) => file.webkitRelativePath === actualPath);
+                const actualFile = files.find((file) => file.webkitRelativePath === actualPath);
 
-            if (actualFile) {
-                fileMap[definedFile] = URL.createObjectURL(actualFile);
+                if (actualFile) {
+                    fileMap[definedFile] = URL.createObjectURL(actualFile);
+                }
             }
+        } catch (error) {
+            for (const resourceObjectURL of Object.values(fileMap)) {
+                URL.revokeObjectURL(resourceObjectURL);
+            }
+            throw error;
         }
 
         FileLoader.filesMap[settings._objectURL!] = fileMap;

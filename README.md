@@ -28,6 +28,16 @@ supported surface down to the production path this repo actually builds, types, 
 - Cubism SDK for Web: R5 (Framework 5-r.5, Core 6.0.1)
 - Browser: WebGL 2, ES6
 
+#### Model asset trust
+
+This library is designed to render model resources selected by the application developer. It does not sandbox
+models, restrict the number or size of referenced resources, limit archive expansion, or impose network policy.
+Applications that accept third-party or user-provided models must establish their own trust, download, archive,
+and resource-budget controls before passing those assets to `Live2DModel`.
+
+The optional `checkMocConsistency` load option asks Cubism Core to validate a `.moc3` file's consistency. It is
+an additional integrity check, not a sandbox or a substitute for application-level controls.
+
 #### Documentations
 
 - [Documentation](docs/docs/index.md)

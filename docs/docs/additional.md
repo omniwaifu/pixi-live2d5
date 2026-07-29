@@ -26,6 +26,12 @@ import { HitAreaFrames } from "pixi-live2d5/extra";
 
 `Live2DModel` can be created from an array of `File`s. Each `File` must have a [`webkitRelativePath`](https://developer.mozilla.org/en-US/docs/Web/API/File/webkitRelativePath) property that represents relative path of the file.
 
+!!! warning "Trusted assets only"
+    The upload loader resolves and renders the files it is given; it is not a model sandbox. Applications that
+    accept files from users or other third parties must validate them and enforce their own file-count,
+    file-size, resource, and memory limits before calling `Live2DModel.from()`. The optional
+    `checkMocConsistency` setting is an additional Cubism integrity check, not a security boundary.
+
 You can get the `File`s from a directory picker:
 
 ```html
@@ -81,6 +87,11 @@ const model = await Live2DModel.from(files);
 If given files include no settings file, an error will be thrown.
 
 ## Loading model from a zip file (experimental)
+
+!!! warning "Archive policy belongs to the application"
+    `ZipLoader` deliberately delegates archive handling to your chosen ZIP implementation. Before extracting an
+    untrusted archive, enforce compressed and expanded size limits, entry-count and path rules, timeouts, and
+    cancellation in that implementation. This library does not impose those policies.
 
 !!! info "How this works"
 Zip files are handled by an internal helper `ZipLoader`. It looks for the model settings file inside the zip, extracts referenced resource

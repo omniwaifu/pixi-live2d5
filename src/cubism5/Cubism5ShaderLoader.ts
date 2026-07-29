@@ -111,9 +111,17 @@ export function releaseCubism5Context(gl: WebGL2RenderingContext): void {
     if (!usage || usage.references === 0) return;
 
     usage.references--;
+    endCubism5Frame(gl, usage);
+    usage.frameStarted = false;
+
+    // Cubism's renderer release deletes render targets that are also cached by the
+    // shared offscreen manager. Drop that context's cache after every model release,
+    // including when sibling models still use the same context, so the survivor
+    // recreates valid targets on its next frame.
+    CubismWebGLOffscreenManager.getInstance().removeContext(gl);
+
     if (usage.references > 0) return;
 
-    endCubism5Frame(gl, usage);
     contextUsages.delete(gl);
     activeContextCount--;
 
@@ -127,8 +135,6 @@ export function releaseCubism5Context(gl: WebGL2RenderingContext): void {
         CubismShaderManager_WebGL.deleteInstance();
         CubismWebGLOffscreenManager.getInstance().release();
         shaderLoadRecords = new WeakMap();
-    } else {
-        CubismWebGLOffscreenManager.getInstance().removeContext(gl);
     }
 }
 

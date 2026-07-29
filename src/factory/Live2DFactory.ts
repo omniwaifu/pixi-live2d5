@@ -227,16 +227,32 @@ export class Live2DFactory {
             live2dModel.emit("ready"),
         );
 
-        await runMiddlewares(Live2DFactory.live2DModelMiddlewares, {
-            live2dModel: live2dModel as Live2DModel<InternalModel>,
-            source,
-            options: options || {},
-        });
+        try {
+            await runMiddlewares(Live2DFactory.live2DModelMiddlewares, {
+                live2dModel: live2dModel as Live2DModel<InternalModel>,
+                source,
+                options: options || {},
+            });
 
-        // the "load" event should never be emitted before "ready"
-        await readyEventEmitted;
+            // the "load" event should never be emitted before "ready"
+            await readyEventEmitted;
 
-        live2dModel.emit("load");
+            live2dModel.emit("load");
+        } catch (error) {
+            if (!live2dModel.destroyed) {
+                try {
+                    live2dModel.destroy();
+                } catch (cleanupError) {
+                    logger.warn(
+                        live2dModel.tag,
+                        "Failed to clean up after model creation failed.",
+                        cleanupError,
+                    );
+                }
+            }
+
+            throw error;
+        }
     }
 
     /**

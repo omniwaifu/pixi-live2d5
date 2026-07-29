@@ -1,7 +1,8 @@
-import type { InternalModel, ModelSettings } from "@/cubism-common";
+import type { ModelSettings } from "@/cubism-common";
 import type { Live2DFactoryContext } from "@/factory/Live2DFactory";
 import type { Live2DFactory } from "@/factory/Live2DFactory";
 import { Live2DLoader } from "@/factory/Live2DLoader";
+import { logger } from "@/utils";
 import { resolveUrl } from "@/utils/url";
 import type { Middleware } from "@/utils/middleware";
 import type { ExtendedFileList } from "./FileLoader";
@@ -27,6 +28,7 @@ export class ZipLoader {
         let sourceURL: string;
         let zipBlob: Blob | undefined;
         let settings: ModelSettings | undefined;
+        let localSourceURL = false;
 
         if (
             typeof source === "string" &&
@@ -52,42 +54,58 @@ export class ZipLoader {
             zipBlob = source[0];
 
             sourceURL = URL.createObjectURL(zipBlob);
+            localSourceURL = true;
 
             settings = (source as ExtendedFileList).settings;
         }
 
         if (zipBlob) {
-            if (!zipBlob.size) {
-                throw new Error("Empty zip file");
+            let reader: ZipReader | undefined;
+            let primaryError: unknown;
+            let primaryFailed = false;
+            let cleanupError: unknown;
+            let cleanupFailed = false;
+
+            try {
+                if (!zipBlob.size) {
+                    throw new Error("Empty zip file");
+                }
+
+                reader = await ZipLoader.zipReader(zipBlob, sourceURL!);
+
+                if (!settings) {
+                    settings = await ZipLoader.createSettings(reader);
+                }
+
+                // a fake URL, the only requirement is it should be unique,
+                // as FileLoader will use it as the ID of all uploaded files
+                settings._objectURL = ZipLoader.ZIP_PROTOCOL + ZipLoader.uid++ + "/" + settings.url;
+
+                const files = await ZipLoader.unzip(reader, settings);
+
+                (files as ExtendedFileList).settings = settings;
+
+                // pass files to the FileLoader
+                context.source = files;
+            } catch (error) {
+                primaryError = error;
+                primaryFailed = true;
+            } finally {
+                try {
+                    if (reader) ZipLoader.releaseReader(reader);
+                } catch (error) {
+                    cleanupError = error;
+                    cleanupFailed = true;
+                    if (primaryFailed) {
+                        logger.warn("ZipLoader", "Failed to release ZIP reader.", error);
+                    }
+                } finally {
+                    if (localSourceURL) URL.revokeObjectURL(sourceURL!);
+                }
             }
 
-            const reader = await ZipLoader.zipReader(zipBlob, sourceURL!);
-
-            if (!settings) {
-                settings = await ZipLoader.createSettings(reader);
-            }
-
-            // a fake URL, the only requirement is it should be unique,
-            // as FileLoader will use it as the ID of all uploaded files
-            settings._objectURL = ZipLoader.ZIP_PROTOCOL + ZipLoader.uid++ + "/" + settings.url;
-
-            const files = await ZipLoader.unzip(reader, settings);
-
-            (files as ExtendedFileList).settings = settings;
-
-            // pass files to the FileLoader
-            context.source = files;
-
-            // clean up when destroying the model
-            if (sourceURL!.startsWith("blob:")) {
-                context.live2dModel.once("modelLoaded", (internalModel: InternalModel) => {
-                    internalModel.once("destroy", function (this: InternalModel) {
-                        URL.revokeObjectURL(sourceURL);
-                    });
-                });
-            }
-
-            ZipLoader.releaseReader(reader);
+            if (primaryFailed) throw primaryError;
+            if (cleanupFailed) throw cleanupError;
         }
 
         return next();

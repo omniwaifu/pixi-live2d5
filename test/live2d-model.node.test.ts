@@ -41,6 +41,51 @@ describe("Live2DModel lifecycle helpers", () => {
         setupSpy.mockRestore();
     });
 
+    it("invokes onError once for the synchronous factory", async () => {
+        const error = new Error("boom");
+        const onError = vi.fn();
+        const setupSpy = vi.spyOn(Live2DFactory, "setupLive2DModel").mockRejectedValue(error);
+
+        Live2DModel.fromSync("https://example.com/model3.json", {
+            onError,
+            autoUpdate: false,
+            autoHitTest: false,
+            autoFocus: false,
+        });
+
+        await vi.waitFor(() => expect(onError).toHaveBeenCalledOnce());
+        expect(onError).toHaveBeenCalledWith(error);
+
+        setupSpy.mockRestore();
+    });
+
+    it("destroys a partial model once and preserves the setup error", async () => {
+        const error = new Error("resource load failed");
+        const model = new Live2DModel({
+            autoUpdate: false,
+            autoHitTest: false,
+            autoFocus: false,
+        });
+        const destroySpy = vi.spyOn(model, "destroy");
+        const originalMiddlewares = Live2DFactory.live2DModelMiddlewares;
+
+        Live2DFactory.live2DModelMiddlewares = [
+            async () => {
+                throw error;
+            },
+        ];
+
+        try {
+            await expect(
+                Live2DFactory.setupLive2DModel(model, "https://example.com/model3.json"),
+            ).rejects.toBe(error);
+            expect(destroySpy).toHaveBeenCalledOnce();
+            expect(model.destroyed).toBe(true);
+        } finally {
+            Live2DFactory.live2DModelMiddlewares = originalMiddlewares;
+        }
+    });
+
     it("can be destroyed before the internal model exists", () => {
         const setupSpy = vi
             .spyOn(Live2DFactory, "setupLive2DModel")
