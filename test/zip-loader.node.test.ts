@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolveObjectURL } from "node:buffer";
+import { Live2DModel } from "../src/Live2DModel";
+import { FileLoader, type ExtendedFileList } from "../src/factory/FileLoader";
 import { Live2DLoader } from "../src/factory/Live2DLoader";
 import { ZipLoader } from "../src/factory/ZipLoader";
+import type { Live2DFactoryContext } from "../src/factory/Live2DFactory";
 import { Cubism5ModelSettings } from "../src/cubism5/Cubism5ModelSettings";
 
 describe("ZipLoader", () => {
@@ -133,7 +137,7 @@ describe("ZipLoader", () => {
         expect(revokeSpy).not.toHaveBeenCalled();
     });
 
-    it("extracts only defined entries by their raw archive names", async () => {
+    it("extracts only defined entries by raw archive names and resolves them to their contents", async () => {
         const textures = ["tex[1].png", "100%.png", "a b.png"];
         const entries = [
             "model dir/m.model3.json",
@@ -164,6 +168,34 @@ describe("ZipLoader", () => {
             "model dir/tex[1].png": "contents of model dir/tex[1].png",
             "model dir/100%.png": "contents of model dir/100%.png",
             "model dir/a b.png": "contents of model dir/a b.png",
+        });
+
+        // hand the extracted files to FileLoader and read back what settings resolve to
+        settings._objectURL = URL.createObjectURL(new Blob(["{}"]));
+        (files as ExtendedFileList).settings = settings;
+        const model = new Live2DModel({ autoUpdate: false, autoHitTest: false, autoFocus: false });
+        const resolved: Record<string, string> = {};
+
+        try {
+            await FileLoader.factory(
+                { source: files, live2dModel: model, options: {} } satisfies Live2DFactoryContext,
+                async () => {
+                    for (const file of ["m.moc3", ...textures]) {
+                        const blob = resolveObjectURL(settings.resolveURL(file));
+                        if (!blob) throw new Error("Object URL is not alive for " + file);
+                        resolved[file] = await blob.text();
+                    }
+                },
+            );
+        } finally {
+            model.destroy();
+        }
+
+        expect(resolved).toEqual({
+            "m.moc3": "contents of model dir/m.moc3",
+            "tex[1].png": "contents of model dir/tex[1].png",
+            "100%.png": "contents of model dir/100%.png",
+            "a b.png": "contents of model dir/a b.png",
         });
     });
 });
