@@ -1,3 +1,4 @@
+import type { Live2DModel } from "@/Live2DModel";
 import { ModelSettings } from "@/cubism-common";
 import type { Live2DFactoryContext } from "@/factory/Live2DFactory";
 import { Live2DFactory } from "@/factory/Live2DFactory";
@@ -7,6 +8,16 @@ import { logger } from "@/utils";
 import type { Middleware } from "@/utils/middleware";
 
 const TAG = "Live2DFactory";
+
+/**
+ * Throws if the model was destroyed before its loading finished, so resources that arrive late
+ * are neither published to nor created for a released model.
+ */
+export function assertNotDestroyed(live2dModel: Live2DModel): void {
+    if (live2dModel.destroyed) {
+        throw new Error("Live2DModel was destroyed while loading.");
+    }
+}
 
 /**
  * A middleware that converts the source from a URL to a settings JSON object.
@@ -77,6 +88,10 @@ export const setupOptionals: Middleware<Live2DFactoryContext> = async (context, 
     const internalModel = context.internalModel;
 
     if (internalModel) {
+        const live2dModel = context.live2dModel;
+
+        assertNotDestroyed(live2dModel);
+
         const settings = context.settings!;
         const runtime = Live2DFactory.findRuntime(settings);
 
@@ -95,11 +110,15 @@ export const setupOptionals: Middleware<Live2DFactoryContext> = async (context, 
                         target: internalModel,
                     })
                         .then((data: ArrayBuffer) => {
+                            if (live2dModel.destroyed) return;
+
                             internalModel.pose = runtime.createPose(internalModel.coreModel, data);
-                            context.live2dModel.emit("poseLoaded", internalModel.pose);
+                            live2dModel.emit("poseLoaded", internalModel.pose);
                         })
                         .catch((e: Error) => {
-                            context.live2dModel.emit("poseLoadError", e);
+                            if (live2dModel.destroyed) return;
+
+                            live2dModel.emit("poseLoadError", e);
                             logger.warn(TAG, "Failed to load pose.", e);
                         }),
                 );
@@ -114,14 +133,18 @@ export const setupOptionals: Middleware<Live2DFactoryContext> = async (context, 
                         target: internalModel,
                     })
                         .then((data: ArrayBuffer) => {
+                            if (live2dModel.destroyed) return;
+
                             internalModel.physics = runtime.createPhysics(
                                 internalModel.coreModel,
                                 data,
                             );
-                            context.live2dModel.emit("physicsLoaded", internalModel.physics);
+                            live2dModel.emit("physicsLoaded", internalModel.physics);
                         })
                         .catch((e: Error) => {
-                            context.live2dModel.emit("physicsLoadError", e);
+                            if (live2dModel.destroyed) return;
+
+                            live2dModel.emit("physicsLoadError", e);
                             logger.warn(TAG, "Failed to load physics.", e);
                         }),
                 );
@@ -143,6 +166,8 @@ export const setupEssentials: Middleware<Live2DFactoryContext> = async (context,
     if (context.settings) {
         const live2DModel = context.live2dModel;
 
+        assertNotDestroyed(live2DModel);
+
         const loadingTextures = Promise.all(
             context.settings.textures.map((tex) => {
                 const url = context.settings!.resolveURL(tex);
@@ -156,15 +181,29 @@ export const setupEssentials: Middleware<Live2DFactoryContext> = async (context,
         // wait for the internal model to be created
         await next();
 
-        if (context.internalModel) {
-            live2DModel.internalModel = context.internalModel;
-            live2DModel.emit("modelLoaded", context.internalModel);
-        } else {
+        const internalModel = context.internalModel;
+
+        if (!internalModel) {
             throw new TypeError("Missing internal model.");
         }
 
-        live2DModel.textures = await loadingTextures;
-        live2DModel.emit("textureLoaded", live2DModel.textures);
+        if (live2DModel.destroyed) {
+            // never transferred to the public model, so nothing else will release it
+            internalModel.destroy();
+            assertNotDestroyed(live2DModel);
+        }
+
+        live2DModel.internalModel = internalModel;
+        live2DModel.emit("modelLoaded", internalModel);
+        assertNotDestroyed(live2DModel);
+
+        // textures are shared through the Assets cache, so a canceled load leaves them alone
+        const textures = await loadingTextures;
+        assertNotDestroyed(live2DModel);
+
+        live2DModel.textures = textures;
+        live2DModel.emit("textureLoaded", textures);
+        assertNotDestroyed(live2DModel);
     } else {
         throw new TypeError("Missing settings.");
     }
@@ -183,12 +222,16 @@ export const createInternalModel: Middleware<Live2DFactoryContext> = async (cont
             throw new TypeError("Unknown model settings.");
         }
 
+        assertNotDestroyed(context.live2dModel);
+
         const modelData = await Live2DLoader.load<ArrayBuffer>({
             settings,
             url: settings.moc,
             type: "arraybuffer",
             target: context.live2dModel,
         });
+
+        assertNotDestroyed(context.live2dModel);
 
         if (!runtime.isValidMoc(modelData)) {
             throw new Error("Invalid moc data");

@@ -3,6 +3,7 @@ import type { InternalModel, ModelSettings } from "@/cubism-common";
 import { ExpressionManager, MotionManager } from "@/cubism-common";
 import { Live2DLoader } from "@/factory/Live2DLoader";
 import {
+    assertNotDestroyed,
     createInternalModel,
     jsonToSettings,
     setupEssentials,
@@ -223,9 +224,9 @@ export class Live2DFactory {
         // both the internal model and textures have been loaded,
         // we should here wrap the emit() in a then() so it'll
         // be executed after all the handlers of "modelLoaded" and "textureLoaded"
-        const readyEventEmitted = Promise.all([textureLoaded, modelLoaded]).then(() =>
-            live2dModel.emit("ready"),
-        );
+        const readyEventEmitted = Promise.all([textureLoaded, modelLoaded]).then(() => {
+            if (!live2dModel.destroyed) live2dModel.emit("ready");
+        });
 
         try {
             await runMiddlewares(Live2DFactory.live2DModelMiddlewares, {
@@ -234,8 +235,14 @@ export class Live2DFactory {
                 options: options || {},
             });
 
+            // destruction removes the listeners above, so readiness would never settle
+            assertNotDestroyed(live2dModel);
+
             // the "load" event should never be emitted before "ready"
             await readyEventEmitted;
+
+            // a "ready" listener may have destroyed the model
+            assertNotDestroyed(live2dModel);
 
             live2dModel.emit("load");
         } catch (error) {

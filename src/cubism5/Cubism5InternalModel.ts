@@ -104,7 +104,9 @@ export class Cubism5InternalModel extends InternalModel {
         this.bodyAngleXParamIndex = this.coreModel.getParameterIndex(
             CubismFramework.getIdManager().getId(this.idParamBodyAngleX),
         );
-        this.breathParamIndex = this.coreModel.getParameterIndex(this.idParamBreath);
+        this.breathParamIndex = this.coreModel.getParameterIndex(
+            CubismFramework.getIdManager().getId(this.idParamBreath),
+        );
 
         this.init();
     }
@@ -153,7 +155,15 @@ export class Cubism5InternalModel extends InternalModel {
                 0.5,
             ),
         );
-        breathParams.push(new BreathParameterData(this.idParamBreath, 0.0, 0.5, 3.2345, 0.5));
+        breathParams.push(
+            new BreathParameterData(
+                CubismFramework.getIdManager().getId(this.idParamBreath),
+                0.0,
+                0.5,
+                3.2345,
+                0.5,
+            ),
+        );
         this.breath.setParameters(breathParams);
     }
 
@@ -295,14 +305,16 @@ export class Cubism5InternalModel extends InternalModel {
     }
 
     getDrawableIndex(id: string): number {
-        return this.coreModel.getDrawableIndex(id);
+        return this.getDrawableIDs().indexOf(id);
     }
 
     getDrawableVertices(drawIndex: number | string): Float32Array {
         if (typeof drawIndex === "string") {
-            drawIndex = this.coreModel.getDrawableIndex(drawIndex);
+            const drawableID = drawIndex;
 
-            if (drawIndex === -1) throw new TypeError("Unable to find drawable ID: " + drawIndex);
+            drawIndex = this.getDrawableIndex(drawableID);
+
+            if (drawIndex === -1) throw new TypeError("Unable to find drawable ID: " + drawableID);
         }
 
         const arr = this.coreModel.getDrawableVertices(drawIndex).slice();
@@ -350,6 +362,10 @@ export class Cubism5InternalModel extends InternalModel {
 
         this.motionManager.expressionManager?.update(model, now);
 
+        // Focus is additive on top of motion and expression output, and must run before physics
+        // so physics reacts to the resulting head/body angles in the same frame.
+        this.updateFocus();
+
         // revert the timestamps to be milliseconds
         this.updateNaturalMovements(dt * 1000, now * 1000);
 
@@ -365,38 +381,20 @@ export class Cubism5InternalModel extends InternalModel {
         this.physics?.evaluate(model, dt);
         this.pose?.updateParameters(model, dt);
 
-        // Apply focus controller AFTER everything else so it's not overwritten
-        this.updateFocus();
-
         this.emit("beforeModelUpdate");
 
         model.update();
     }
 
     updateFocus() {
-        // Skip if any parameter indices are invalid
-        if (this.eyeballXParamIndex < 0 || this.angleXParamIndex < 0) {
-            return;
-        }
+        const { x, y } = this.focusController;
 
-        // Apply all focus parameters for complete mouse tracking
-        const eyeX = this.focusController.x;
-        const eyeY = this.focusController.y;
-        const angleX = this.focusController.x * 30;
-        const angleY = this.focusController.y * 30;
-
-        this.coreModel.setParameterValueByIndex(this.eyeballXParamIndex, eyeX);
-        this.coreModel.setParameterValueByIndex(this.eyeballYParamIndex, eyeY);
-        this.coreModel.setParameterValueByIndex(this.angleXParamIndex, angleX);
-        this.coreModel.setParameterValueByIndex(this.angleYParamIndex, angleY);
-        this.coreModel.setParameterValueByIndex(
-            this.angleZParamIndex,
-            this.focusController.x * this.focusController.y * -30,
-        );
-        this.coreModel.setParameterValueByIndex(
-            this.bodyAngleXParamIndex,
-            this.focusController.x * 10,
-        );
+        this.coreModel.addParameterValueByIndex(this.eyeballXParamIndex, x);
+        this.coreModel.addParameterValueByIndex(this.eyeballYParamIndex, y);
+        this.coreModel.addParameterValueByIndex(this.angleXParamIndex, x * 30);
+        this.coreModel.addParameterValueByIndex(this.angleYParamIndex, y * 30);
+        this.coreModel.addParameterValueByIndex(this.angleZParamIndex, x * y * -30);
+        this.coreModel.addParameterValueByIndex(this.bodyAngleXParamIndex, x * 10);
     }
 
     updateNaturalMovements(dt: DOMHighResTimeStamp, now: DOMHighResTimeStamp) {

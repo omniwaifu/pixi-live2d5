@@ -56,7 +56,9 @@ The main validation flow is:
 bun run validate
 ```
 
-This runs the TypeScript compiler and linter, generates declarations, builds the bundles, and runs both the node and browser tests.
+This runs the TypeScript compiler and linter, generates declarations, builds the bundles, checks the packed package as a consumer installs it, and runs both the node and browser tests.
+
+The package check (`bun run test:package`) needs a fresh build. It packs the checkout, installs the tarball with the matching `pixi.js` into a temporary project, type-checks every public entrypoint against the published declarations, and loads every entrypoint through `require` and `import` under Node with the downloaded Core preloaded.
 
 If you only want to run a subset while iterating:
 
@@ -66,6 +68,7 @@ bun run lint
 bun run type
 bun run typecheck:declarations
 bun run build
+bun run test:package
 bun run test:node
 bun run test:browser
 ```

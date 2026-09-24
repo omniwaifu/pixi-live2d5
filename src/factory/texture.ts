@@ -20,7 +20,8 @@ export function createTexture(
         }
 
         try {
-            return await Assets.load(url);
+            // Force the texture parser: extensionless URLs (e.g. Blob URLs) can't be inferred.
+            return await Assets.load<Texture>({ src: url, parser: "texture" });
         } finally {
             previousCrossOrigins.forEach(({ parser, crossOrigin }) => {
                 parser.config.crossOrigin = crossOrigin;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Live2DLoader } from "../src/factory/Live2DLoader";
 import { ZipLoader } from "../src/factory/ZipLoader";
+import { Cubism5ModelSettings } from "../src/cubism5/Cubism5ModelSettings";
 
 describe("ZipLoader", () => {
     afterEach(() => {
@@ -130,5 +131,39 @@ describe("ZipLoader", () => {
         );
 
         expect(revokeSpy).not.toHaveBeenCalled();
+    });
+
+    it("extracts only defined entries by their raw archive names", async () => {
+        const textures = ["tex[1].png", "100%.png", "a b.png"];
+        const entries = [
+            "model dir/m.model3.json",
+            "model dir/m.moc3",
+            ...textures.map((name) => `model dir/${name}`),
+            "model dir/unused.png",
+        ];
+        const settings = new Cubism5ModelSettings({
+            url: "model dir/m.model3.json",
+            FileReferences: { Moc: "m.moc3", Textures: textures },
+        });
+        const reader = {};
+        vi.spyOn(ZipLoader, "getFilePaths").mockResolvedValue(entries);
+        vi.spyOn(ZipLoader, "getFiles").mockImplementation(async (_reader, paths) => {
+            for (const path of paths) {
+                if (!entries.includes(path)) throw new Error("No such entry: " + path);
+            }
+            return paths.map((path) => new File([`contents of ${path}`], path.split("/").pop()!));
+        });
+
+        const files = await ZipLoader.unzip(reader, settings);
+        const extracted = await Promise.all(
+            files.map(async (file) => [file.webkitRelativePath, await file.text()]),
+        );
+
+        expect(Object.fromEntries(extracted)).toEqual({
+            "model dir/m.moc3": "contents of model dir/m.moc3",
+            "model dir/tex[1].png": "contents of model dir/tex[1].png",
+            "model dir/100%.png": "contents of model dir/100%.png",
+            "model dir/a b.png": "contents of model dir/a b.png",
+        });
     });
 });

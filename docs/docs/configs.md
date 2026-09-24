@@ -12,10 +12,12 @@ config.sound = true;
 // defer the playback of a motion and its sound until both are loaded
 config.motionSync = true;
 
-// default fade-in/fade-out durations in milliseconds, will be applied to
-// motions/expressions that don't have these values specified
+// default fade-in/fade-out durations in milliseconds, applied to motions/expressions
+// that don't specify these values. For motions, a nonnegative FadeInTime/FadeOutTime
+// in model3.json takes precedence (including 0), then the fade in the motion3.json,
+// then these defaults.
 config.motionFadingDuration = 500;
-config.idleMotionFadingDuration = 500;
+config.idleMotionFadingDuration = 2000;
 config.expressionFadingDuration = 500;
 
 // Public URL for the 13 external GLSL files required by Cubism SDK for Web R5.

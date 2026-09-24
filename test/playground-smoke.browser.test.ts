@@ -9,6 +9,10 @@ import {
     releaseCubism5Context,
     retainCubism5Context,
 } from "../src/cubism5/Cubism5ShaderLoader";
+import type { Cubism5InternalModel } from "../src/cubism5/Cubism5InternalModel";
+import type { Live2DModel as Live2DModelInstance } from "../src/Live2DModel";
+import { createTexture } from "../src/factory/texture";
+import { resolveUrl } from "../src/utils/url";
 
 const SHADER_PATH = "/cubism5/shaders/";
 const MODEL_URL = "/test/assets/Mao/Mao.model3.json";
@@ -408,6 +412,147 @@ describe("Cubism 5 browser smoke", () => {
         app.render();
         expect(model.internalModel.shaderReady).toBeDefined();
         await model.internalModel.shaderReady;
+    }
+});
+
+describe("Cubism 5 runtime lookups on Mao", () => {
+    let model: Live2DModelInstance | undefined;
+    let internalModel: Cubism5InternalModel;
+
+    beforeEach(async () => {
+        (window as any).PIXI = PIXI;
+
+        const { config } = await import("../src/config");
+        const { Live2DModel } = await import("../src");
+
+        config.sound = false;
+        config.cubism5ShaderPath = SHADER_PATH;
+        model = await Live2DModel.from(MODEL_URL, {
+            autoUpdate: false,
+            autoHitTest: false,
+            autoFocus: false,
+        });
+        // Mao is a Cubism 5 model, so the factory always creates a Cubism5InternalModel.
+        internalModel = model.internalModel as Cubism5InternalModel;
+    });
+
+    afterEach(() => {
+        model?.destroy();
+        model = undefined;
+    });
+
+    it("resolves drawables by raw string ID and reports missing IDs verbatim", () => {
+        const ids = internalModel.getDrawableIDs();
+
+        expect(internalModel.getDrawableIndex(ids[3]!)).toBe(3);
+        expect(Array.from(internalModel.getDrawableVertices(ids[3]!))).toEqual(
+            Array.from(internalModel.getDrawableVertices(3)),
+        );
+        expect(() => internalModel.getDrawableVertices("NoSuchDrawable")).toThrow(
+            new TypeError("Unable to find drawable ID: NoSuchDrawable"),
+        );
+    });
+
+    it("drives the model's real ParamBreath slot", () => {
+        const { coreModel } = internalModel;
+        const breathIndex = coreModel.getModel().parameters.ids.indexOf("ParamBreath");
+        // Breath data for ParamBreath: offset 0, peak 0.5, cycle 3.2345 s, weight 0.5.
+        const expected = 0.5 * (0.5 * Math.sin((0.8 * 2 * Math.PI) / 3.2345));
+
+        expect(breathIndex).toBeGreaterThanOrEqual(0);
+
+        coreModel.setParameterValueByIndex(breathIndex, 0);
+        internalModel.updateNaturalMovements(800, 800);
+
+        expect(coreModel.getParameterValueByIndex(breathIndex)).toBeCloseTo(expected, 4);
+    });
+});
+
+describe("createTexture with real Mao textures", () => {
+    const TEXTURE_SIZE = 64;
+    let app: Application;
+    const objectURLs: string[] = [];
+    const loadedURLs: string[] = [];
+
+    beforeEach(async () => {
+        document.body.innerHTML = "";
+        app = await createApplication(TEXTURE_SIZE, TEXTURE_SIZE, 2);
+    });
+
+    afterEach(async () => {
+        await PIXI.Assets.unload(loadedURLs.splice(0));
+        objectURLs.splice(0).forEach((url) => URL.revokeObjectURL(url));
+        vi.restoreAllMocks();
+        app?.destroy(true);
+    });
+
+    it("loads an extensionless Blob URL into a texture that renders pixels", async () => {
+        const textureURL = await maoTextureURL();
+        const blob = await (await fetch(textureURL)).blob();
+        const blobURL = URL.createObjectURL(blob);
+        objectURLs.push(blobURL);
+
+        const texture = await createTexture(blobURL);
+        loadedURLs.push(blobURL);
+
+        expect(texture).toBeInstanceOf(Texture);
+        expect(texture.width).toBeGreaterThan(0);
+        expect(texture.height).toBeGreaterThan(0);
+        expect(visiblePixelCount(renderTexturePixels(texture))).toBeGreaterThan(100);
+    });
+
+    it.each([true, false])(
+        "loads a usable texture again after the previous one was destroyed (destroySource: %s)",
+        async (destroySource) => {
+            const textureURL = await maoTextureURL();
+            vi.spyOn(console, "warn").mockImplementation(() => {});
+
+            const first = await createTexture(textureURL);
+            loadedURLs.push(textureURL);
+            const firstPixels = renderTexturePixels(first);
+
+            first.destroy(destroySource);
+
+            const second = await createTexture(textureURL);
+
+            expect(second.destroyed).toBe(false);
+            expect(second.width).toBeGreaterThan(0);
+            expect(visiblePixelCount(firstPixels)).toBeGreaterThan(100);
+            expect(renderTexturePixels(second)).toEqual(firstPixels);
+        },
+    );
+
+    async function maoTextureURL(): Promise<string> {
+        const settings = await (await fetch(MODEL_URL)).json();
+
+        return resolveUrl(MODEL_URL, settings.FileReferences.Textures[0]);
+    }
+
+    function renderTexturePixels(texture: Texture): Uint8ClampedArray {
+        const sprite = new Sprite(texture);
+        const target = PIXI.RenderTexture.create({ width: TEXTURE_SIZE, height: TEXTURE_SIZE });
+
+        sprite.width = TEXTURE_SIZE;
+        sprite.height = TEXTURE_SIZE;
+
+        try {
+            app.renderer.render({ container: sprite, target, clear: true });
+
+            return app.renderer.extract.pixels(target).pixels;
+        } finally {
+            sprite.destroy();
+            target.destroy(true);
+        }
+    }
+
+    function visiblePixelCount(pixels: Uint8ClampedArray): number {
+        let count = 0;
+
+        for (let index = 3; index < pixels.length; index += 4) {
+            if (pixels[index]! > 0) count++;
+        }
+
+        return count;
     }
 });
 

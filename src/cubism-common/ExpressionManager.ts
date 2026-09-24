@@ -80,6 +80,10 @@ export abstract class ExpressionManager<
      * Emits `expressionLoaded` on success and `expressionLoadError` when loading fails.
      */
     protected async loadExpression(index: number): Promise<Expression | undefined> {
+        if (this.destroyed) {
+            return undefined;
+        }
+
         if (!this.definitions[index]) {
             logger.warn(this.tag, `Undefined expression at [${index}]`);
             return undefined;
@@ -99,7 +103,11 @@ export abstract class ExpressionManager<
 
         const expression = await this._loadExpression(index);
 
-        this.expressions[index] = expression;
+        if (this.destroyed) {
+            return undefined;
+        }
+
+        this.expressions[index] = expression ?? null;
 
         return expression;
     }
@@ -117,6 +125,10 @@ export abstract class ExpressionManager<
      * @return Promise that resolves with true if succeeded, with false otherwise.
      */
     async setRandomExpression(): Promise<boolean> {
+        if (this.destroyed) {
+            return false;
+        }
+
         if (this.definitions.length) {
             const availableIndices = [];
 
@@ -133,7 +145,7 @@ export abstract class ExpressionManager<
             if (availableIndices.length) {
                 const index = Math.floor(Math.random() * availableIndices.length);
 
-                return this.setExpression(index);
+                return this.setExpression(availableIndices[index]!);
             }
         }
 
@@ -160,6 +172,10 @@ export abstract class ExpressionManager<
      * @return Promise that resolves with true if succeeded, with false otherwise.
      */
     async setExpression(index: number | string): Promise<boolean> {
+        if (this.destroyed) {
+            return false;
+        }
+
         if (typeof index !== "number") {
             index = this.getExpressionIndex(index);
         }
@@ -169,6 +185,9 @@ export abstract class ExpressionManager<
         }
 
         if (index === this.expressions.indexOf(this.currentExpression)) {
+            // this request supersedes any pending one
+            this.reserveExpressionIndex = -1;
+
             return false;
         }
 
@@ -176,7 +195,13 @@ export abstract class ExpressionManager<
 
         const expression = await this.loadExpression(index);
 
-        if (!expression || this.reserveExpressionIndex !== index) {
+        if (this.reserveExpressionIndex !== index) {
+            return false;
+        }
+
+        if (!expression) {
+            this.reserveExpressionIndex = -1;
+
             return false;
         }
 

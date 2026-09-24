@@ -109,6 +109,15 @@ export class MotionState {
                 return false;
             }
 
+            if (this.reservePriority !== MotionPriority.NONE) {
+                logger.log(
+                    this.tag,
+                    `Cannot start idle motion because another motion has reserved.`,
+                    this.dump(group, index),
+                );
+                return false;
+            }
+
             if (this.reservedIdleGroup !== undefined) {
                 logger.log(
                     this.tag,
@@ -162,6 +171,15 @@ export class MotionState {
                 logger.log(
                     this.tag,
                     "Cannot start idle motion because another motion is playing.",
+                    this.dump(group, index),
+                );
+                return false;
+            }
+
+            if (this.reservePriority !== MotionPriority.NONE) {
+                logger.log(
+                    this.tag,
+                    "Cannot start idle motion because another motion has reserved.",
                     this.dump(group, index),
                 );
                 return false;
@@ -248,7 +266,11 @@ export class MotionState {
      * Checks if an idle motion should be requests to play.
      */
     shouldRequestIdleMotion(): boolean {
-        return this.currentGroup === undefined && this.reservedIdleGroup === undefined;
+        return (
+            this.currentGroup === undefined &&
+            this.reservedGroup === undefined &&
+            this.reservedIdleGroup === undefined
+        );
     }
 
     /**

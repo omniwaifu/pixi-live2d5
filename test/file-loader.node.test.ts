@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Live2DModel } from "../src/Live2DModel";
 import { FileLoader, type ExtendedFileList } from "../src/factory/FileLoader";
+import { resolveObjectURL } from "node:buffer";
+import { Cubism5ModelSettings } from "../src/cubism5/Cubism5ModelSettings";
 
 describe("FileLoader cleanup", () => {
     afterEach(() => {
@@ -89,8 +91,91 @@ describe("FileLoader cleanup", () => {
     });
 });
 
-function uploadedFile(path: string): File {
-    const file = new File(["data"], path);
+describe("FileLoader path matching", () => {
+    const modelDir = "model dir";
+    const textures = ["tex[1].png", "100%.png", "a b.png"];
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        for (const key of Object.keys(FileLoader.filesMap)) {
+            delete FileLoader.filesMap[key];
+        }
+    });
+
+    it("resolves essential files whose names need URL escaping to their own contents", async () => {
+        const settings = createModelSettings(textures);
+        const files = withSettings(
+            [
+                uploadedFile(`${modelDir}/m.moc3`, "moc"),
+                ...textures.map((name) => uploadedFile(`${modelDir}/${name}`, `texture:${name}`)),
+                uploadedFile(`${modelDir}/unused.png`, "unused"),
+            ],
+            settings,
+        );
+        const model = createModel();
+        const resolvedContents: Record<string, string> = {};
+
+        await FileLoader.factory(createContext(files, model), async () => {
+            for (const file of ["m.moc3", ...textures]) {
+                resolvedContents[file] = await readObjectURL(settings.resolveURL(file));
+            }
+        });
+
+        expect(resolvedContents).toEqual({
+            "m.moc3": "moc",
+            "tex[1].png": "texture:tex[1].png",
+            "100%.png": "texture:100%.png",
+            "a b.png": "texture:a b.png",
+        });
+        expect(Object.keys(FileLoader.filesMap[settings._objectURL!]!).sort()).toEqual(
+            ["m.moc3", ...textures].sort(),
+        );
+
+        model.destroy();
+    });
+
+    it("still rejects and releases URLs when an escaped essential file is missing", async () => {
+        const settings = createModelSettings(textures);
+        const files = withSettings(
+            [
+                uploadedFile(`${modelDir}/m.moc3`, "moc"),
+                uploadedFile(`${modelDir}/tex[1].png`, "texture"),
+                uploadedFile(`${modelDir}/a b.png`, "texture"),
+            ],
+            settings,
+        );
+        const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+        await expect(FileLoader.factory(createContext(files), async () => {})).rejects.toThrow(
+            `File "100%.png" is defined in settings, but doesn't exist in given files`,
+        );
+
+        expect(revokeSpy).toHaveBeenCalledWith(settings._objectURL);
+        expect(FileLoader.filesMap[settings._objectURL!]).toBeUndefined();
+    });
+
+    function createModelSettings(textureFiles: string[]): Cubism5ModelSettings {
+        const settings = new Cubism5ModelSettings({
+            url: `${modelDir}/m.model3.json`,
+            FileReferences: { Moc: "m.moc3", Textures: textureFiles },
+        });
+
+        settings._objectURL = URL.createObjectURL(new Blob(["{}"]));
+
+        return settings;
+    }
+
+    async function readObjectURL(url: string): Promise<string> {
+        const blob = resolveObjectURL(url);
+
+        if (!blob) throw new Error("Object URL is not alive: " + url);
+
+        return blob.text();
+    }
+});
+
+function uploadedFile(path: string, contents = "data"): File {
+    const file = new File([contents], path);
     Object.defineProperty(file, "webkitRelativePath", { value: path });
     return file;
 }

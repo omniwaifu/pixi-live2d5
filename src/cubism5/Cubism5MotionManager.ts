@@ -3,6 +3,8 @@ import type { MotionManagerOptions } from "@/cubism-common/MotionManager";
 import { MotionManager } from "@/cubism-common/MotionManager";
 import { Cubism5ExpressionManager } from "@/cubism5/Cubism5ExpressionManager";
 import type { Cubism5ModelSettings } from "@/cubism5/Cubism5ModelSettings";
+import type { CubismIdHandle } from "@cubism/id/cubismid";
+import { CubismFramework } from "@cubism/live2dcubismframework";
 import { CubismMotion } from "@cubism/motion/cubismmotion";
 import { CubismMotionJson } from "@cubism/motion/cubismmotionjson";
 import { CubismMotionQueueManager } from "@cubism/motion/cubismmotionqueuemanager";
@@ -23,15 +25,17 @@ export class Cubism5MotionManager extends MotionManager<any, Cubism5MotionDefini
 
     expressionManager?: Cubism5ExpressionManager;
 
-    eyeBlinkIds: any[];
-    lipSyncIds: any[];
+    eyeBlinkIds: CubismIdHandle[];
+    lipSyncIds: CubismIdHandle[];
 
     constructor(settings: Cubism5ModelSettings, options?: MotionManagerOptions) {
         super(settings, options);
 
+        const idManager = CubismFramework.getIdManager();
+
         this.definitions = settings.motions ?? {};
-        this.eyeBlinkIds = settings.getEyeBlinkParameters() || [];
-        this.lipSyncIds = settings.getLipSyncParameters() || [];
+        this.eyeBlinkIds = settings.getEyeBlinkParameters().map((id) => idManager.getId(id));
+        this.lipSyncIds = settings.getLipSyncParameters().map((id) => idManager.getId(id));
 
         this.init(options);
     }
@@ -74,24 +78,21 @@ export class Cubism5MotionManager extends MotionManager<any, Cubism5MotionDefini
                 ? config.idleMotionFadingDuration
                 : config.motionFadingDuration) / 1000;
 
-        // fading duration priorities: model.json > motion.json > config (default)
-
-        // overwrite the fading duration only when it's not defined in the motion JSON
-        if (json.getMotionFadeInTime() === undefined) {
-            motion.setFadeInTime(
-                definition.FadeInTime! > 0 ? definition.FadeInTime! : defaultFadingDuration,
-            );
+        // fading duration priorities: model.json > motion.json > config (default);
+        // negative model.json values defer to the next source
+        if (definition.FadeInTime !== undefined && definition.FadeInTime >= 0) {
+            motion.setFadeInTime(definition.FadeInTime);
+        } else if (!json.isExistMotionFadeInTime()) {
+            motion.setFadeInTime(defaultFadingDuration);
         }
 
-        if (json.getMotionFadeOutTime() === undefined) {
-            motion.setFadeOutTime(
-                definition.FadeOutTime! > 0 ? definition.FadeOutTime! : defaultFadingDuration,
-            );
+        if (definition.FadeOutTime !== undefined && definition.FadeOutTime >= 0) {
+            motion.setFadeOutTime(definition.FadeOutTime);
+        } else if (!json.isExistMotionFadeOutTime()) {
+            motion.setFadeOutTime(defaultFadingDuration);
         }
 
-        // Initialize with empty arrays to prevent null reference errors
-        // The motion JSON already contains all necessary parameter information
-        motion.setEffectIds([], []);
+        motion.setEffectIds(this.eyeBlinkIds, this.lipSyncIds);
 
         return motion;
     }

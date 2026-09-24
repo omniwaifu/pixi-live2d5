@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from "fs";
-import { dirname, relative, resolve, sep } from "path";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs";
+import { basename, dirname, resolve, sep } from "path";
 
 const declarations = [
     {
@@ -43,13 +43,19 @@ for (const { entryFile, outputFile, transform } of declarations) {
                 return [];
             }
 
-            let referencePath = relative(dirname(outputFile), referenceTarget).split(sep).join("/");
-
-            if (!referencePath.startsWith(".")) {
-                referencePath = `./${referencePath}`;
+            if (!existsSync(referenceTarget)) {
+                throw new Error(
+                    `Missing Core declaration ${referenceTarget}; run \`bun run setup\` first.`,
+                );
             }
 
-            return [`/// <reference path="${referencePath}"/>`];
+            // Published declarations must be self-contained, so ship the Core declaration
+            // unmodified next to the output instead of referencing the unpublished core/ folder.
+            const referenceFile = basename(referenceTarget);
+
+            copyFileSync(referenceTarget, resolve(dirname(outputFile), referenceFile));
+
+            return [`/// <reference path="./${referenceFile}"/>`];
         })
         .filter((reference) => !output.includes(reference));
 

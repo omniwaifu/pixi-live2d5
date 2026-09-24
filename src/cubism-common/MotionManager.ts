@@ -213,22 +213,26 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
         index: number,
         priority = MotionPriority.NORMAL,
     ): Promise<boolean> {
-        if (!this.state.reserve(group, index, priority)) {
-            return false;
-        }
-
         const definition = this.definitions[group]?.[index];
 
-        if (!definition) {
+        if (!definition || !this.state.reserve(group, index, priority)) {
             return false;
         }
 
         if (this.currentAudio) {
             // TODO: reuse the audio?
             SoundManager.dispose(this.currentAudio);
+            this.currentAudio = undefined;
         }
 
         let audio: HTMLAudioElement | undefined;
+
+        // late callbacks of this request must not detach the audio of a newer request
+        const releaseAudio = () => {
+            if (this.currentAudio === audio) {
+                this.currentAudio = undefined;
+            }
+        };
 
         if (config.sound) {
             const soundURL = this.getSoundFile(definition);
@@ -238,8 +242,8 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
                     // start to load the audio
                     audio = SoundManager.add(
                         this.settings.resolveURL(soundURL),
-                        () => (this.currentAudio = undefined),
-                        () => (this.currentAudio = undefined),
+                        releaseAudio,
+                        releaseAudio,
                     );
 
                     this.currentAudio = audio;
@@ -265,7 +269,7 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends Even
         if (!this.state.start(motion, group, index, priority)) {
             if (audio) {
                 SoundManager.dispose(audio);
-                this.currentAudio = undefined;
+                releaseAudio();
             }
 
             return false;

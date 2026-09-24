@@ -75,6 +75,10 @@ export class Automator {
         }
 
         if (autoUpdate) {
+            if (this._autoUpdate && this._ticker) {
+                return;
+            }
+
             if (this._ticker) {
                 this._ticker.add(onTickerUpdate, this);
                 this._autoUpdate = true;

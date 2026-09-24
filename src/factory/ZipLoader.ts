@@ -3,7 +3,7 @@ import type { Live2DFactoryContext } from "@/factory/Live2DFactory";
 import type { Live2DFactory } from "@/factory/Live2DFactory";
 import { Live2DLoader } from "@/factory/Live2DLoader";
 import { logger } from "@/utils";
-import { resolveUrl } from "@/utils/url";
+import { normalizePath, resolveUrl } from "@/utils/url";
 import type { Middleware } from "@/utils/middleware";
 import type { ExtendedFileList } from "./FileLoader";
 
@@ -113,15 +113,24 @@ export class ZipLoader {
 
     static async unzip(reader: ZipReader, settings: ModelSettings): Promise<File[]> {
         const filePaths = await ZipLoader.getFilePaths(reader);
+        const rawPathsByPath = new Map<string, string>();
+
+        for (const filePath of filePaths) {
+            const path = normalizePath(filePath);
+
+            if (!rawPathsByPath.has(path)) {
+                rawPathsByPath.set(path, filePath);
+            }
+        }
 
         const requiredFilePaths: string[] = [];
 
         // only consume the files defined in settings
         for (const definedFile of settings.getDefinedFiles()) {
-            const actualPath = decodeURI(resolveUrl(settings.url, definedFile));
+            const rawPath = rawPathsByPath.get(resolveUrl(settings.url, definedFile));
 
-            if (filePaths.includes(actualPath)) {
-                requiredFilePaths.push(actualPath);
+            if (rawPath !== undefined) {
+                requiredFilePaths.push(rawPath);
             }
         }
 

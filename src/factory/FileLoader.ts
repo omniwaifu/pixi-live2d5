@@ -1,7 +1,7 @@
 import type { ModelSettings } from "@/cubism-common";
 import type { Live2DFactoryContext } from "@/factory";
 import { Live2DFactory } from "@/factory";
-import { resolveUrl } from "@/utils/url";
+import { normalizePath, resolveUrl } from "@/utils/url";
 import type { Middleware } from "@/utils/middleware";
 
 declare global {
@@ -87,7 +87,7 @@ export class FileLoader {
             context.live2dModel.once("destroy", cleanup);
 
             try {
-                settings.validateFiles(files.map((file) => encodeURI(file.webkitRelativePath)));
+                settings.validateFiles(files.map((file) => normalizePath(file.webkitRelativePath)));
 
                 await FileLoader.upload(files, settings);
 
@@ -128,13 +128,20 @@ export class FileLoader {
      */
     static async upload(files: File[], settings: ModelSettings): Promise<void> {
         const fileMap: Record<string, string> = {};
+        const filesByPath = new Map<string, File>();
+
+        for (const file of files) {
+            const path = normalizePath(file.webkitRelativePath);
+
+            if (!filesByPath.has(path)) {
+                filesByPath.set(path, file);
+            }
+        }
 
         try {
             // only consume the files defined in settings
             for (const definedFile of settings.getDefinedFiles()) {
-                const actualPath = decodeURI(resolveUrl(settings.url, definedFile));
-
-                const actualFile = files.find((file) => file.webkitRelativePath === actualPath);
+                const actualFile = filesByPath.get(resolveUrl(settings.url, definedFile));
 
                 if (actualFile) {
                     fileMap[definedFile] = URL.createObjectURL(actualFile);

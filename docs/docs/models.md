@@ -150,6 +150,11 @@ model.once("ready", () => {
 });
 ```
 
+Destroying a model before it finishes loading cancels the creation: resources that arrive later are released
+instead of being attached, no further `ready` or `load` event is emitted, and `Live2DModel.from()` rejects (or
+`fromSync()` calls `onError`) with `Live2DModel was destroyed while loading.` If an in-flight request is aborted
+first, its network error is reported instead.
+
 The following diagram represents the procedure of model creation.
 
 ```mermaid

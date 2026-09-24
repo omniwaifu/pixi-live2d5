@@ -19,10 +19,12 @@ const profiles = entries
                 emptyOutDir: false,
                 minify: minify && "terser",
                 lib: {
-                    formats: minify ? ["umd"] : ["es", "umd"],
+                    formats: minify ? ["umd"] : ["es", "cjs", "umd"],
                     entry: resolve(__dirname, "..", entry),
                     fileName: (format) =>
-                        `${name}${format === "umd" ? (minify ? ".min" : "") : "." + format}.js`,
+                        format === "cjs"
+                            ? `${name}.cjs`
+                            : `${name}${format === "umd" ? (minify ? ".min" : "") : "." + format}.js`,
                 },
             },
         })),

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Live2DModel } from "../src/Live2DModel";
 import { Live2DFactory } from "../src/factory/Live2DFactory";
+import type { InternalModel } from "../src/cubism-common";
 
 describe("Live2DModel lifecycle helpers", () => {
     it("invokes onLoad for the async factory", async () => {
@@ -100,5 +101,33 @@ describe("Live2DModel lifecycle helpers", () => {
         expect(() => model.destroy()).not.toThrow();
 
         setupSpy.mockRestore();
+    });
+
+    it("refreshes bounds cached before load once the internal model loads", () => {
+        const model = new Live2DModel({
+            autoUpdate: false,
+            autoHitTest: false,
+            autoFocus: false,
+        });
+        const inside = { x: 50, y: 25 };
+
+        // querying bounds before load caches the empty bounds
+        expect(model.containsPoint(inside)).toBe(false);
+
+        const internalModel = {
+            settings: { name: "fake" },
+            width: 100,
+            height: 50,
+            destroy() {},
+        } as unknown as InternalModel;
+        model.internalModel = internalModel;
+        model.emit("modelLoaded", internalModel);
+
+        const { minX, minY, maxX, maxY } = model.bounds;
+        expect({ minX, minY, maxX, maxY }).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 50 });
+        expect(model.containsPoint(inside)).toBe(true);
+        expect(model.containsPoint({ x: 150, y: 25 })).toBe(false);
+
+        model.destroy();
     });
 });

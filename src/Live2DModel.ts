@@ -194,6 +194,8 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends ViewC
     protected init(options?: Live2DModelOptions) {
         this.tag = `Live2DModel(${this.internalModel.settings.name})`;
         this.onAnchorChange();
+        // bounds queried before load were cached as empty; the internal model now defines them
+        this.onViewUpdate();
     }
 
     /**
